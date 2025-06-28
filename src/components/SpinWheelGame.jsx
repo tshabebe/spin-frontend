@@ -298,7 +298,7 @@ const SpinWheelGame = () => {
           <h2 className="text-xl font-bold mb-4">Error</h2>
           <p className="mb-4">{error}</p>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate(`/lobby?token=${token}`)}
             className="px-4 py-2 bg-[#8a1a2d] rounded-lg hover:bg-[#a72037] transition-colors"
           >
             Go Back
@@ -314,7 +314,7 @@ const SpinWheelGame = () => {
         <div className="text-center">
           <h2 className="text-xl font-bold mb-4">Game Not Found</h2>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate(`/lobby?token=${token}`)}
             className="px-4 py-2 bg-[#8a1a2d] rounded-lg hover:bg-[#a72037] transition-colors"
           >
             Go Back
