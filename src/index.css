@@ -4,14 +4,14 @@
 
 /* Add this to your existing styles */
 .animate-gradient-xy {
-  background: linear-gradient(115deg, transparent, transparent, rgba(59,130,246,0.2), transparent, transparent);
+  background: linear-gradient(115deg, transparent, transparent, rgba(34,211,238,0.2), transparent, transparent);
   background-size: 400% 400%;
   animation: gradient 6s linear infinite;
 }
 
 .animate-border-glow {
   position: relative;
-  border: 1px solid rgba(255,255,255,0.03);
+  border: 1px solid rgba(34,211,238,0.03);
   animation: borderGlow 4s ease-in-out infinite;
 }
 
@@ -20,7 +20,7 @@
   position: absolute;
   inset: -1px;
   z-index: -1;
-  background: linear-gradient(115deg, transparent, transparent, rgba(59,130,246,0.15), transparent, transparent);
+  background: linear-gradient(115deg, transparent, transparent, rgba(34,211,238,0.15), transparent, transparent);
   background-size: 400% 400%;
   animation: gradient 6s linear infinite;
   border-radius: inherit;
@@ -38,7 +38,7 @@
   left: -2px;
   right: -2px;
   bottom: -2px;
-  border: 2px solid #fb923c;
+  border: 2px solid #0891b2;
   border-radius: 0.5rem;
   animation: swapPulse 2s infinite;
   pointer-events: none;

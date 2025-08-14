@@ -26,19 +26,19 @@ const Loading = () => {
   }, [direction]);
 
   return (
-    <div className="fixed inset-0 min-h-screen bg-[#0A0B1A] backdrop-blur-sm flex flex-col items-center justify-center z-50">
-      <FaDiceD20 className="w-[50px] h-[50px] text-white animate-spin" />
-      <p className="text-white mt-2 text-xs animate-pulse">Next Games </p>
+    <div className="fixed inset-0 min-h-screen bg-cyan-950 backdrop-blur-sm flex flex-col items-center justify-center z-50">
+      <FaDiceD20 className="w-[50px] h-[50px] text-cyan-100 animate-spin" />
+      <p className="text-cyan-100 pt-2 text-xs animate-pulse">Next Games </p>
 
-      <div className="w-32 h-2 bg-gray-700 rounded-full mt-4 overflow-hidden">
+      <div className="w-32 h-2 bg-cyan-800 rounded-full pt-4 overflow-hidden">
         <div
-          className={`h-full bg-white transition-all duration-100 ease-out ${
+          className={`h-full bg-cyan-300 transition-all duration-100 ease-out ${
             direction > 0 ? 'rounded-r-full rounded-l-sm' : 'rounded-l-full rounded-r-sm'
           }`}
           style={{ width: `${progress}%` }}
         ></div>
       </div>
-      <p className="text-white mt-1 text-xs">Loading...</p>
+      <p className="text-cyan-100 pt-1 text-xs">Loading...</p>
     </div>
   );
 };

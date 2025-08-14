@@ -375,8 +375,10 @@ export const SpinWheel = ({
   // Show loading state if no segments
   if (segments.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-8">
-        <div className="text-white text-lg">Waiting for players...</div>
+      <div className="min-h-screen bg-cyan-950 flex flex-col">
+        <div className="flex-1 flex flex-col items-center justify-center p-8">
+          <div className="text-cyan-100 text-lg">Waiting for players...</div>
+        </div>
       </div>
     );
   }
@@ -385,15 +387,15 @@ export const SpinWheel = ({
     <div className="flex flex-col items-center">
       {/* Real-time indicators */}
       {isRealtime && (
-        <div className="mb-4 flex gap-4 text-sm text-gray-300">
+        <div className="pb-4 flex gap-4 text-sm text-cyan-200">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            <span className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
             <span>Real-time</span>
           </div>
           {serverCalculationTime && (
             <div className="flex items-center gap-2">
               <span>Server: {serverCalculationTime.toFixed(0)}ms</span>
-            </div>
+          </div>
           )}
         </div>
       )}
@@ -419,7 +421,7 @@ export const SpinWheel = ({
 
         {/* Suspense phase indicator */}
         {currentPhase && (
-          <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-xs text-gray-400">
+          <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-xs text-cyan-200">
             {currentPhase === ANIMATION_PHASE.NATURAL && 'Spinning...'}
             {currentPhase === ANIMATION_PHASE.OVERSHOOT && 'Building suspense...'}
             {currentPhase === ANIMATION_PHASE.HESITATION && 'Almost there...'}
@@ -430,7 +432,7 @@ export const SpinWheel = ({
 
       {/* Winner display */}
       {winner && !isSpinning && (
-        <div className="mt-8 p-4 bg-gradient-to-r from-green-600 to-green-700 rounded-lg text-white shadow-lg">
+        <div className="pt-8 p-4 bg-gradient-to-r from-cyan-600 to-cyan-700 rounded-lg text-cyan-50 shadow-lg">
           <div className="text-2xl font-bold">🎉 Winner: {winner.text || winner.id} 🎉</div>
         </div>
       )}

@@ -302,212 +302,192 @@ const Lobby = () => {
     return username.charAt(0).toUpperCase();
   };
 
-  return (
-    <div className="min-h-screen bg-[#0A0B1A] text-white p-3 sm:p-6">
-      <div className="max-w-4xl mx-auto">
+    return (
+    <div className="min-h-screen bg-cyan-950 text-cyan-100 flex flex-col">
+      <div className="max-w-4xl mx-auto flex-1 flex flex-col p-3 sm:p-6">
 
-        <div className=" rounded-xl mb-3">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 bg-[#252642] p-2 rounded-lg text-sm">
-                <FaCoins size={12} className="text-yellow-400" />
-                <span>{Number(user?.balance).toFixed(2)}</span>
-              </div>
-            </div>
+        {/* Header Section - Horizontal flow */}
+        <div className="flex items-center justify-between p-4 bg-cyan-900/20 rounded-xl">
+          {/* Balance Display */}
+          <div className="flex items-center gap-2 bg-cyan-900 p-2 rounded-lg">
+            <FaCoins size={12} className="text-cyan-300" />
+            <span className="text-sm">{Number(user?.balance).toFixed(2)}</span>
+          </div>
 
-            {/* User Info - Smaller text */}
-            <div className="flex items-center gap-2">
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="bg-cyan-600 p-2 rounded-lg flex items-center justify-center hover:bg-cyan-500 active:scale-95
+                       transition-all disabled:opacity-50 text-sm font-medium text-cyan-50"
+            >
+              <FaSync size={14} className={isLoading ? "animate-spin" : ""} />
+              <span className="sr-only">Reload</span>
+            </button>
 
-              <button
-                onClick={handleRefresh}
-                disabled={isLoading}
-                className="bg-blue-500 p-2 rounded-lg flex items-center justify-center gap-1 hover:opacity-90 active:scale-95
-                         transition-all disabled:opacity-50 text-sm font-medium text-black"
-              >
-                <FaSync size={14} className={isLoading ? "animate-spin" : ""} />
-                <span className="sr-only">Reload</span>
-              </button>
-
-              {/* Demo Button */}
-              <button
-                onClick={() => window.location.href = '/roulette-demo'}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 p-2 rounded-lg flex items-center justify-center gap-1 hover:opacity-90 active:scale-95
-                         transition-all text-sm font-medium text-white shadow-lg"
-              >
-                <FaGamepad size={14} />
-                <span className="sr-only">Demo</span>
-              </button>
-
-            </div>
+            <button
+              onClick={() => window.location.href = '/roulette-demo'}
+              className="bg-gradient-to-r from-cyan-500 to-cyan-400 p-2 rounded-lg flex items-center justify-center hover:opacity-90 active:scale-95
+                       transition-all text-sm font-medium text-cyan-50 shadow-lg"
+            >
+              <FaGamepad size={14} />
+              <span className="sr-only">Demo</span>
+            </button>
           </div>
         </div>
 
+        {/* Main Content - Vertical flow */}
+        <div className="flex-1 flex flex-col pt-6">
+          <h2 className="text-xl sm:text-2xl font-semibold pb-4">
+            Active Spin Games
+          </h2>
 
-        {/* Games Sections - Mobile optimized cards */}
-        <div className="space-y-6">
+          {isLoading ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-cyan-500"></div>
+            </div>
+          ) : gamesError ? (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-center">{gamesError}</p>
+            </div>
+          ) : recentGames.length > 0 ? (
+            <div className="flex-1 flex flex-col gap-3 p-2 rounded-xl bg-cyan-950/40 backdrop-blur-sm">
+              {recentGames.map((game) => (
+                <div
+                  key={`public-${game.gameId}`}
+                  className={`relative overflow-hidden rounded-lg p-4
+                             bg-cyan-900/30 backdrop-blur-md
+                             border border-cyan-200/5
+                             shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]
+                             transition-all duration-300 hover:bg-cyan-900/40
+                             animate-border-glow
+                             ${isUserInGame(game) ? 'border-cyan-400/50 bg-cyan-400/10' : ''}`}
+                >
+                  {/* Animated Border Gradient */}
+                  <div className="absolute inset-0 -z-10 animate-gradient-xy">
+                    <div className="absolute inset-[1px] rounded-lg bg-cyan-950" />
+                  </div>
 
-          {/* Active Games */}
-          <div>
-            <h2 className="text-xl sm:text-2xl font-semibold mb-3">
-              Active Spin Games
-            </h2>
-            {isLoading ? (
-              <div className="flex justify-center items-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-              </div>
-            ) : gamesError ? (
-              <p className="text-center py-4">{gamesError}</p>
-            ) : recentGames.length > 0 ? (
-              <div className="space-y-2 p-2 rounded-xl bg-[#0A0B1A]/40 backdrop-blur-sm">
-                {recentGames.map((game) => (
-                  <div
-                    key={`public-${game.gameId}`}
-                    className={`relative overflow-hidden rounded-lg p-2.5 mb-2
-                               bg-[#1A1B2E]/30 backdrop-blur-md
-                               border border-white/5
-                               shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]
-                               transition-all duration-300 hover:bg-[#1A1B2E]/40
-                               animate-border-glow
-                               ${isUserInGame(game) ? 'border-green-500/50 bg-green-500/10' : ''}`}
-                  >
-                    {/* Animated Border Gradient */}
-                    <div className="absolute inset-0 -z-10 animate-gradient-xy">
-                      <div className="absolute inset-[1px] rounded-lg bg-[#0A0B1A]" />
+                  {/* You're in this game badge */}
+                  {isUserInGame(game) && (
+                    <div className="absolute top-2 right-2 z-10">
+                      <span className="bg-cyan-500 text-cyan-50 text-[8px] px-2 py-1 rounded-full font-medium shadow-lg">
+                        You're in!
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Game Card Content - Horizontal flow */}
+                  <div className="flex items-center justify-between">
+                    {/* Left Player Section */}
+                    <div className="flex flex-col items-center flex-shrink-0 w-24">
+                      <div className="relative">
+                        <div className="w-8 h-8 rounded-lg overflow-hidden
+                                    bg-gradient-to-br from-cyan-500 to-cyan-600 shadow-lg
+                                    border border-cyan-200/10 flex items-center justify-center">
+                          <span className="text-cyan-50 font-bold text-sm">
+                            {getTextAvatar(game.players[0]?.username)}
+                          </span>
+                        </div>
+                        {/* Creator badge */}
+                        {game.creator === game.players[0]?.username && (
+                          <span className="absolute -top-1 -right-1 text-[10px] text-cyan-300
+                                     drop-shadow-[0_0_2px_rgba(34,211,238,0.3)]">
+                            👑
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-cyan-200 pt-1">
+                        {maskUsername(game.players[0]?.username)}
+                      </span>
+                      <span className="text-[10px] text-cyan-300 drop-shadow-[0_0_2px_rgba(34,211,238,0.3)]">
+                        {game.betAmount} ብር
+                      </span>
                     </div>
 
-                    {/* You're in this game badge */}
-                    {isUserInGame(game) && (
-                      <div className="absolute top-2 right-2 z-10">
-                        <span className="bg-green-500 text-white text-[8px] px-2 py-1 rounded-full font-medium shadow-lg">
-                          You're in!
-                        </span>
+                    {/* Center Game Info - Vertical flow */}
+                    <div className="flex flex-col items-center justify-center flex-1 min-w-[80px]">
+                      <div className="flex items-center justify-center h-6 pb-1">
+                        <FaSpinner className="text-cyan-400 text-xl drop-shadow-[0_0_3px_rgba(34,211,238,0.5)]" />
                       </div>
-                    )}
+                      <div className="text-[10px] text-cyan-300 pb-1">
+                        Spin Game ({game.players.length}/{game.maxPlayers})
+                      </div>
 
-                    {/* Content */}
-                    <div className="relative flex items-center justify-between">
-                      {/* Left Player - Stacked Layout */}
-                      <div className="flex flex-col items-center w-24">
-                        <div className="relative mb-0.5">
-                          <div
-                            className="w-8 h-8 rounded-lg overflow-hidden
-                                        bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg
-                                        border border-white/10 flex items-center justify-center"
+                      {game.status === "waiting" && (
+                        isUserInGame(game) ? (
+                          <button
+                            onClick={() => window.location.href = `/spin-wheel/${game.gameId}?token=${token}`}
+                            className="px-4 py-1 bg-cyan-500/90 text-cyan-50 rounded-full text-[10px]
+                                     hover:bg-cyan-500 active:scale-95 transition-all
+                                     min-w-[60px] flex items-center justify-center
+                                     shadow-[0_0_10px_rgba(34,211,238,0.3)]
+                                     hover:shadow-[0_0_15px_rgba(34,211,238,0.4)]"
                           >
-                            <span className="text-white font-bold text-sm">
-                              {getTextAvatar(game.players[0]?.username)}
-                            </span>
-                          </div>
-                          {/* Creator badge */}
-                          {game.creator === game.players[0]?.username && (
-                            <span
-                              className="absolute -top-1 -right-1 text-[10px] text-yellow-400
-                                         drop-shadow-[0_0_2px_rgba(234,179,8,0.3)]"
-                            >
-                              👑
-                            </span>
-                          )}
+                            Rejoin
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleJoinGame(game.gameId, game.betAmount)}
+                            disabled={joiningGameId === game.gameId}
+                            className="px-4 py-1 bg-cyan-600/90 text-cyan-50 rounded-full text-[10px]
+                                     hover:bg-cyan-600 active:scale-95 transition-all disabled:opacity-50
+                                     min-w-[60px] flex items-center justify-center
+                                     shadow-[0_0_10px_rgba(8,145,178,0.3)]
+                                     hover:shadow-[0_0_15px_rgba(8,145,178,0.4)]"
+                          >
+                            {joiningGameId === game.gameId ? "..." : "Join"}
+                          </button>
+                        )
+                      )}
+                      {game.status === "spinning" && (
+                        <div className="text-[10px] text-cyan-300">
+                          Spinning...
                         </div>
-                        <span className="text-[11px] text-white/90 mb-0.5">
-                          {maskUsername(game.players[0]?.username)}
+                      )}
+                      {game.status === "completed" && (
+                        <div className="text-[10px] text-cyan-400">
+                          Completed
+                        </div>
+                      )}
+                      {game.status === "waiting" && gameCountdowns[game.gameId] && gameCountdowns[game.gameId].remainingSeconds > 0 && (
+                        <div className="text-[10px] text-cyan-300 font-bold animate-pulse">
+                          ⏰ {gameCountdowns[game.gameId].remainingSeconds}s
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right Stake Info - Vertical flow */}
+                    <div className="flex flex-col items-end flex-shrink-0 w-24">
+                      <div className="text-center">
+                        <span className="text-[10px] text-cyan-200 block">
+                          Bet
                         </span>
-                        <span
-                          className="text-[10px] text-yellow-400
-                                       drop-shadow-[0_0_2px_rgba(234,179,8,0.3)]"
-                        >
+                        <div className="text-cyan-300 text-[11px] drop-shadow-[0_0_2px_rgba(34,211,238,0.3)]">
                           {game.betAmount} ብር
+                        </div>
+                      </div>
+                      <div className="text-center pt-1">
+                        <span className="text-[10px] text-cyan-200 block">
+                          Max Prize
                         </span>
-                      </div>
-
-                      {/* Center VS Section */}
-                      <div className="flex flex-col items-center justify-center min-w-[80px]">
-                        <div className="flex items-center justify-center h-6 mb-1 gap-1">
-                          <FaSpinner className="text-yellow-500 text-xl drop-shadow-[0_0_3px_rgba(234,179,8,0.5)]" />
-                        </div>
-                        <div className="text-[10px] text-blue-300 mb-1">
-                          Spin Game ({game.players.length}/{game.maxPlayers})
-                        </div>
-                        {game.status === "waiting" && (
-                          isUserInGame(game) ? (
-                            <button
-                              onClick={() => window.location.href = `/spin-wheel/${game.gameId}?token=${token}`}
-                              className="px-4 py-1 bg-green-500/90 text-white rounded-full text-[10px]
-                                       hover:bg-green-500 active:scale-95 transition-all
-                                       min-w-[60px] flex items-center justify-center
-                                       shadow-[0_0_10px_rgba(34,197,94,0.3)]
-                                       hover:shadow-[0_0_15px_rgba(34,197,94,0.4)]"
-                            >
-                              Rejoin
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleJoinGame(game.gameId, game.betAmount)}
-                              disabled={joiningGameId === game.gameId}
-                              className="px-4 py-1 bg-blue-500/90 text-white rounded-full text-[10px]
-                                       hover:bg-blue-500 active:scale-95 transition-all disabled:opacity-50
-                                       min-w-[60px] flex items-center justify-center
-                                       shadow-[0_0_10px_rgba(59,130,246,0.3)]
-                                       hover:shadow-[0_0_15px_rgba(59,130,246,0.4)]"
-                            >
-                              {joiningGameId === game.gameId ? "..." : "Join"}
-                            </button>
-                          )
-                        )}
-                        {game.status === "spinning" && (
-                          <div className="text-[10px] text-blue-300">
-                            Spinning...
-                          </div>
-                        )}
-                        {game.status === "completed" && (
-                          <div className="text-[10px] text-green-300">
-                            Completed
-                          </div>
-                        )}
-                        {game.status === "waiting" && gameCountdowns[game.gameId] && gameCountdowns[game.gameId].remainingSeconds > 0 && (
-                          <div className="text-[10px] text-orange-400 font-bold animate-pulse">
-                            ⏰ {gameCountdowns[game.gameId].remainingSeconds}s
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Right Side - Stake Info - Stacked Layout */}
-                      <div className="flex flex-col items-end w-24">
-                        <div className="text-center">
-                          <span className="text-[10px] text-gray-400 block">
-                            Bet
-                          </span>
-                          <div
-                            className="text-yellow-400 text-[11px]
-                                        drop-shadow-[0_0_2px_rgba(234,179,8,0.3)]"
-                          >
-                            {game.betAmount} ብር
-                          </div>
-                        </div>
-                        <div className="text-center mt-1">
-                          <span className="text-[10px] text-gray-400 block">
-                            Max Prize
-                          </span>
-                          <div
-                            className="text-green-400 text-[11px]
-                                        drop-shadow-[0_0_2px_rgba(34,197,94,0.3)]"
-                          >
-                            {game.betAmount * game.players.length * 0.9} ብር
-                          </div>
+                        <div className="text-cyan-400 text-[11px] drop-shadow-[0_0_2px_rgba(34,211,238,0.3)]">
+                          {game.betAmount * game.players.length * 0.9} ብር
                         </div>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div>
-                <p className="text-gray-500 text-center py-4">
-                  {isLoading ? 'Loading games...' : 'No spin games available'}
-                </p>
-
-              </div>
-            )}
-          </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-cyan-200 text-center">
+                {isLoading ? 'Loading games...' : 'No spin games available'}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

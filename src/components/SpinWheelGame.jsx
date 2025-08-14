@@ -296,16 +296,18 @@ const SpinWheelGame = () => {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#17212b] text-white">
-        <div className="text-center">
-          <h2 className="text-xl font-bold mb-4">Error</h2>
-          <p className="mb-4">{error}</p>
-          <button
-            onClick={() => navigate(`/lobby?token=${token}`)}
-            className="px-4 py-2 bg-[#8a1a2d] rounded-lg hover:bg-[#a72037] transition-colors"
-          >
-            Go Back
-          </button>
+      <div className="min-h-screen bg-cyan-950 text-cyan-100 flex flex-col">
+        <div className="flex-1 flex flex-col items-center justify-center p-4">
+          <div className="text-center">
+            <h2 className="text-xl font-bold pb-4">Error</h2>
+            <p className="pb-4">{error}</p>
+            <button
+              onClick={() => navigate(`/lobby?token=${token}`)}
+              className="px-4 py-2 bg-cyan-600 rounded-lg hover:bg-cyan-500 transition-colors text-cyan-50"
+            >
+              Go Back
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -313,15 +315,17 @@ const SpinWheelGame = () => {
 
   if (!game) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#17212b] text-white">
-        <div className="text-center">
-          <h2 className="text-xl font-bold mb-4">Game Not Found</h2>
-          <button
-            onClick={() => navigate(`/lobby?token=${token}`)}
-            className="px-4 py-2 bg-[#8a1a2d] rounded-lg hover:bg-[#a72037] transition-colors"
-          >
-            Go Back
-          </button>
+      <div className="min-h-screen bg-cyan-950 text-cyan-100 flex flex-col">
+        <div className="flex-1 flex flex-col items-center justify-center p-4">
+          <div className="text-center">
+            <h2 className="text-xl font-bold pb-4">Game Not Found</h2>
+            <button
+              onClick={() => navigate(`/lobby?token=${token}`)}
+              className="px-4 py-2 bg-cyan-600 rounded-lg hover:bg-cyan-500 transition-colors text-cyan-50"
+            >
+              Go Back
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -332,8 +336,10 @@ const SpinWheelGame = () => {
       {loading ? (
         <Loading />
       ) : error ? (
-        <div className="min-h-screen bg-[#17212b] flex items-center justify-center">
-          <div className="text-red-500 text-xl">{error}</div>
+        <div className="min-h-screen bg-cyan-950 flex flex-col">
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-cyan-400 text-xl">{error}</div>
+          </div>
         </div>
       ) : (
         <Game
