@@ -1,16 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
-import { FaUsers, FaCoins, FaCrown, FaArrowLeft, FaSpinner } from "react-icons/fa";
-import { Wheel } from "react-custom-roulette";
-import { GiSpinningSword } from "react-icons/gi";
-import useSound from 'use-sound';
 import { io } from "socket.io-client";
 import { API_URL } from "../utils/apiUrl";
 import { useGetUserInfo } from "../utils/getUserinfo";
 import Loading from "./Loading";
 import Game from "./new/Game";
-import spinSound from '../assets/spin.mp3';
-import winSound from '../assets/win.mp3';
 
 const SpinWheelGame = () => {
   const { gameId } = useParams();
@@ -20,28 +14,13 @@ const SpinWheelGame = () => {
 
   const [game, setGame] = useState(null);
   const [isSpinning, setIsSpinning] = useState(false);
-  const [rotation, setRotation] = useState(0);
   const [winner, setWinner] = useState(null);
   const [socket, setSocket] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [countdown, setCountdown] = useState(null);
-  const [sparkles, setSparkles] = useState([]);
-  const [showWinnerModal, setShowWinnerModal] = useState(false);
-  const [winnerData, setWinnerData] = useState(null);
   const [suspenseConfig, setSuspenseConfig] = useState(null);
   const [serverCalculationTime, setServerCalculationTime] = useState(null);
-
-  // Wheel state
-  const [mustSpin, setMustSpin] = useState(false);
-  const [prizeNumber, setPrizeNumber] = useState(0);
-  const [winningEntry, setWinningEntry] = useState(null);
-
-  const spinTimeoutRef = useRef(null);
-
-  // Use sound hooks with the imported audio files
-  const [playSpin] = useSound(spinSound, { soundEnabled: true });
-  const [playWin] = useSound(winSound, { soundEnabled: true });
 
   const {
     userInfo: currentUser,
@@ -49,20 +28,7 @@ const SpinWheelGame = () => {
     error: userError
   } = useGetUserInfo(token);
 
-  // Generate sparkles animation
-  useEffect(() => {
-    if (isSpinning) {
-      const newSparkles = Array.from({ length: 20 }, (_, i) => ({
-        id: i,
-        x: Math.random() * 100,
-        y: Math.random() * 100,
-        delay: Math.random() * 2,
-      }));
-      setSparkles(newSparkles);
-    } else {
-      setSparkles([]);
-    }
-  }, [isSpinning]);
+
 
   // Connect to socket
   useEffect(() => {
@@ -90,11 +56,10 @@ const SpinWheelGame = () => {
       setError('Failed to connect to game server');
     });
 
-    newSocket.on('winnerDetermined', ({ game, winner, winnerIndex, spinAngle, message }) => {
+    newSocket.on('winnerDetermined', ({ game, winner, winnerIndex, message }) => {
       console.log('Winner determined:', winner, 'at index:', winnerIndex);
       setGame(game);
       setWinner(winner);
-      setPrizeNumber(winnerIndex);
     });
 
     newSocket.on('gameStateUpdate', ({ game }) => {
@@ -103,12 +68,11 @@ const SpinWheelGame = () => {
       setLoading(false);
     });
 
-    newSocket.on('spinStarted', ({ game, winner, winnerIndex, spinAngle, message, suspenseConfig, calculationTime }) => {
+    newSocket.on('spinStarted', ({ game, winner, winnerIndex, message, suspenseConfig, calculationTime }) => {
       console.log('Spin started with winner:', winner, 'at index:', winnerIndex);
       setGame(game);
       setIsSpinning(true);
       setWinner(winner);
-      setPrizeNumber(winnerIndex);
       // Set suspense configuration from backend
       setSuspenseConfig(suspenseConfig || { type: 'moderate' });
       setServerCalculationTime(calculationTime || null);
@@ -127,11 +91,7 @@ const SpinWheelGame = () => {
       setIsSpinning(true);
       // Use the pre-determined winner from the game state
       if (game.winner) {
-        const winnerIndex = game.players.findIndex(p => p.username === game.winner);
-        if (winnerIndex !== -1) {
-          setPrizeNumber(winnerIndex);
-          setWinner(game.winner);
-        }
+        setWinner(game.winner);
       }
     });
 
@@ -169,18 +129,8 @@ const SpinWheelGame = () => {
 
       // Extract winner from game data if not provided directly
       const gameWinner = winner || game.winner;
-      const gameReason = reason || game.lastAction || 'game_finished';
-
       if (gameWinner) {
         setWinner(gameWinner);
-        // Show winner modal
-        setWinnerData({
-          winner: gameWinner,
-          reason: gameReason,
-          payoutInfo,
-          gameId: game.gameId
-        });
-        setShowWinnerModal(true);
       }
     });
 
@@ -209,20 +159,13 @@ const SpinWheelGame = () => {
     }
   }, [userLoading, currentUser, gameId, socket]);
 
-  // Handle showing winner modal for already finished games
+  // Handle showing winner for already finished games
   useEffect(() => {
-    if (game && game.status === 'completed' && game.winner && !showWinnerModal) {
-      console.log('Game already finished, showing winner modal:', game.winner);
+    if (game && game.status === 'completed' && game.winner) {
+      console.log('Game already finished, winner:', game.winner);
       setWinner(game.winner);
-      setWinnerData({
-        winner: game.winner,
-        reason: game.lastAction || 'game_finished',
-        payoutInfo: null, // Will be populated if available
-        gameId: game.gameId
-      });
-      setShowWinnerModal(true);
     }
-  }, [game, showWinnerModal]);
+  }, [game]);
 
   const fetchGameData = async () => {
     if (!socket) return;
@@ -237,58 +180,12 @@ const SpinWheelGame = () => {
     }
   };
 
-  const completeSpin = async () => {
-    if (!socket || !currentUser) return;
-
-    try {
-      // Use socket to complete spin instead of direct API call
-      socket.emit('completeSpin', {
-        gameId: parseInt(gameId),
-        username: currentUser.username,
-        chatId: currentUser.chatId
-      });
-    } catch (error) {
-      console.error('Error completing spin:', error);
-      setError(error.message);
-    }
-  };
-
   const handleSpinComplete = (spinResult, payoutInfo) => {
-    if (spinTimeoutRef.current) {
-      clearTimeout(spinTimeoutRef.current);
-    }
-
-    setMustSpin(false);
     setIsSpinning(false);
-    setWinningEntry(spinResult.winner);
-    playWin();
-
-    // Show winner modal
-    setWinnerData({
-      winner: spinResult.winner,
-      reason: 'spin_completed',
-      payoutInfo,
-      gameId: game?.gameId
-    });
-    setShowWinnerModal(true);
+    setWinner(spinResult.winner);
   };
 
-  const handleGameSpinComplete = (winnerUsername) => {
-    console.log('Game spin completed for winner:', winnerUsername);
-    // This is called when the wheel stops spinning in the Game component
-    // The actual game completion is handled by the socket events
-  };
 
-  const isInGame = () => {
-    return game && currentUser &&
-      game.players.some(p => p.username === currentUser.username);
-  };
-
-  // Create wheel data from game players
-  const getWheelData = () => {
-    if (!game || !game.players) return [];
-    return game.players.map(player => ({ option: player.username }));
-  };
 
   if (userLoading || loading) {
     return <Loading />;
@@ -297,13 +194,13 @@ const SpinWheelGame = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-cyan-950 text-cyan-100 flex flex-col">
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
+        <div className="flex-1 flex flex-col items-center justify-center p-6">
           <div className="text-center">
-            <h2 className="text-xl font-bold pb-4">Error</h2>
-            <p className="pb-4">{error}</p>
+            <h2 className="text-base font-semibold text-cyan-100 pb-4">Error</h2>
+            <p className="text-sm font-semibold text-cyan-200 pb-4">{error}</p>
             <button
               onClick={() => navigate(`/lobby?token=${token}`)}
-              className="px-4 py-2 bg-cyan-600 rounded-lg hover:bg-cyan-500 transition-colors text-cyan-50"
+              className="px-4 py-3 bg-cyan-700 rounded-lg active:bg-cyan-600 transition-colors text-cyan-50 text-sm font-semibold"
             >
               Go Back
             </button>
@@ -316,12 +213,12 @@ const SpinWheelGame = () => {
   if (!game) {
     return (
       <div className="min-h-screen bg-cyan-950 text-cyan-100 flex flex-col">
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
+        <div className="flex-1 flex flex-col items-center justify-center p-6">
           <div className="text-center">
-            <h2 className="text-xl font-bold pb-4">Game Not Found</h2>
+            <h2 className="text-base font-semibold text-cyan-100 pb-4">Game Not Found</h2>
             <button
               onClick={() => navigate(`/lobby?token=${token}`)}
-              className="px-4 py-2 bg-cyan-600 rounded-lg hover:bg-cyan-500 transition-colors text-cyan-50"
+              className="px-4 py-3 bg-cyan-700 rounded-lg active:bg-cyan-600 transition-colors text-cyan-50 text-sm font-semibold"
             >
               Go Back
             </button>
@@ -337,8 +234,8 @@ const SpinWheelGame = () => {
         <Loading />
       ) : error ? (
         <div className="min-h-screen bg-cyan-950 flex flex-col">
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-cyan-400 text-xl">{error}</div>
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="text-cyan-300 text-base font-semibold">{error}</div>
           </div>
         </div>
       ) : (

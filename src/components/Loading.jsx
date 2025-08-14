@@ -2,43 +2,49 @@ import React, { useState, useEffect } from 'react';
 import { FaDiceD20 } from "react-icons/fa";
 
 const Loading = () => {
-  const [progress, setProgress] = useState(15);
-  const [direction, setDirection] = useState(1);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
       setProgress((prevProgress) => {
-        // Change direction when reaching the edges
-        if (prevProgress >= 85) {
-          setDirection(-1);
-          return prevProgress - 5;
-        } else if (prevProgress <= 15) {
-          setDirection(1);
-          return prevProgress + 5;
+        // Smooth progress from 0 to 100 and loop
+        if (prevProgress >= 100) {
+          return 0;
         }
-        return prevProgress + (5 * direction);
+        return prevProgress + 2;
       });
-    }, 150);
+    }, 100);
 
     return () => {
       clearInterval(timer);
     };
-  }, [direction]);
+  }, []);
 
   return (
     <div className="fixed inset-0 min-h-screen bg-cyan-950 backdrop-blur-sm flex flex-col items-center justify-center z-50">
       <FaDiceD20 className="w-[50px] h-[50px] text-cyan-100 animate-spin" />
       <p className="text-cyan-100 pt-2 text-xs animate-pulse">Next Games </p>
 
-      <div className="w-32 h-2 bg-cyan-800 rounded-full pt-4 overflow-hidden">
+      <div className="w-40 h-4 bg-cyan-800 rounded-full pt-4 overflow-hidden relative shadow-inner">
+        {/* Background track */}
+        <div className="absolute inset-0 bg-cyan-900 rounded-full"></div>
+
+        {/* Progress fill */}
         <div
-          className={`h-full bg-cyan-300 transition-all duration-100 ease-out ${
-            direction > 0 ? 'rounded-r-full rounded-l-sm' : 'rounded-l-full rounded-r-sm'
-          }`}
+          className="h-full bg-gradient-to-r from-cyan-400 to-cyan-300 rounded-full transition-all duration-150 ease-out relative shadow-sm"
           style={{ width: `${progress}%` }}
-        ></div>
+        >
+          {/* Shine effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-100 to-transparent opacity-30 rounded-full"></div>
+        </div>
+
+        {/* Progress percentage overlay */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-cyan-50 text-xs font-bold drop-shadow-sm">
+            {Math.round(progress)}%
+          </span>
+        </div>
       </div>
-      <p className="text-cyan-100 pt-1 text-xs">Loading...</p>
     </div>
   );
 };

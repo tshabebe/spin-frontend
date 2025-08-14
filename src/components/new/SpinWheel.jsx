@@ -78,7 +78,7 @@ const WheelSegment = ({ segment, index, segments }) => {
     const angle = 360 / segments.length;
     const startAngle = idx * angle - 90;
     const endAngle = (idx + 1) * angle - 90;
-    const radius = 180;
+    const radius = 160;
     const cx = 200;
     const cy = 200;
     const x1 = cx + radius * Math.cos((startAngle * Math.PI) / 180);
@@ -92,7 +92,7 @@ const WheelSegment = ({ segment, index, segments }) => {
   const getTextPosition = idx => {
     const angle = 360 / segments.length;
     const middleAngle = (idx * angle + (idx + 1) * angle) / 2 - 90;
-    const textRadius = 130;
+    const textRadius = 110;
     const cx = 200;
     const cy = 200;
     const rad = (middleAngle * Math.PI) / 180;
@@ -115,7 +115,7 @@ const WheelSegment = ({ segment, index, segments }) => {
       <text
         {...getTextPosition(index)}
         fill={segment.textColor || 'white'}
-        fontSize={14}
+        fontSize={12}
         fontWeight="bold"
         textAnchor="middle"
         dominantBaseline="middle"
@@ -129,7 +129,7 @@ const WheelSegment = ({ segment, index, segments }) => {
 };
 
 const WheelCenter = ({ currentSegment }) => {
-  const TrianglePointer = ({ innerRadius, height, fill, baseWidth = 30, insideOffset = 10 }) => {
+  const TrianglePointer = ({ innerRadius, height, fill, baseWidth = 25, insideOffset = 8 }) => {
     const cx = 200;
     const cy = 200;
     const baseY = cy - innerRadius + insideOffset;
@@ -145,17 +145,17 @@ const WheelCenter = ({ currentSegment }) => {
       <motion.circle
         cx={200}
         cy={200}
-        animate={{ r: [28, 35, 28], fill: currentSegment?.color || '#374151' }}
+        animate={{ r: [24, 30, 24], fill: currentSegment?.color || '#374151' }}
         transition={{ r: { duration: 2, ease: 'easeInOut', repeat: Infinity, repeatType: 'loop' }, fill: { duration: 0.1 } }}
         style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
       />
-      <circle cx={200} cy={200} r={28} fill="#1f2937" />
-      <TrianglePointer innerRadius={28} height={30} insideOffset={8} fill="#1f2937" />
+      <circle cx={200} cy={200} r={24} fill="#1f2937" />
+      <TrianglePointer innerRadius={24} height={25} insideOffset={6} fill="#1f2937" />
       <text
         x={200}
         y={200}
         fill={currentSegment?.textColor || 'white'}
-        fontSize={12}
+        fontSize={10}
         fontWeight="bold"
         textAnchor="middle"
         dominantBaseline="middle"
@@ -193,13 +193,13 @@ export const SpinWheel = ({
         // Resume idle rotation for late-joining players
         controls.start({
           rotate: [currentRotation, currentRotation + 360],
-          transition: { duration: 100, ease: 'linear', repeat: Infinity }
+          transition: { duration: 120, ease: 'linear', repeat: Infinity }
         });
       } else if (!shouldContinueAnimation) {
         // Normal idle rotation
         controls.start({
           rotate: [currentRotation, currentRotation + 360],
-          transition: { duration: 100, ease: 'linear', repeat: Infinity }
+          transition: { duration: 120, ease: 'linear', repeat: Infinity }
         });
       }
     }
@@ -311,42 +311,42 @@ export const SpinWheel = ({
     await controls.start({
       rotate: finalTargetRotation,
       transition: {
-        duration: 3 + config.baseRotations * 0.5,
+        duration: 2.5 + config.baseRotations * 0.4,
         ease: [0.25, 0.1, 0.25, 1],
         onUpdate: handleRotationUpdate
       }
     });
 
-    // Phase 2: Overshoot (if configured)
-    if (config.overshoot > 0) {
-      setCurrentPhase(ANIMATION_PHASE.OVERSHOOT);
-      const overshootTarget = finalTargetRotation + config.overshoot;
-      await controls.start({
-        rotate: overshootTarget,
-        transition: {
-          duration: 0.8,
-          ease: 'easeOut',
-          onUpdate: handleRotationUpdate
-        }
-      });
+          // Phase 2: Overshoot (if configured)
+      if (config.overshoot > 0) {
+        setCurrentPhase(ANIMATION_PHASE.OVERSHOOT);
+        const overshootTarget = finalTargetRotation + config.overshoot;
+        await controls.start({
+          rotate: overshootTarget,
+          transition: {
+            duration: 0.6,
+            ease: 'easeOut',
+            onUpdate: handleRotationUpdate
+          }
+        });
 
-      // Phase 3: Hesitation pause
-      if (config.hesitationDuration > 0) {
-        setCurrentPhase(ANIMATION_PHASE.HESITATION);
-        await new Promise(resolve => setTimeout(resolve, config.hesitationDuration * 1000));
+        // Phase 3: Hesitation pause
+        if (config.hesitationDuration > 0) {
+          setCurrentPhase(ANIMATION_PHASE.HESITATION);
+          await new Promise(resolve => setTimeout(resolve, config.hesitationDuration * 1000));
+        }
+
+        // Phase 4: Dramatic return
+        setCurrentPhase(ANIMATION_PHASE.DRAMATIC);
+        await controls.start({
+          rotate: finalTargetRotation,
+          transition: {
+            duration: 1.2 * (1 / config.dramaticSlowdown),
+            ease: [0.42, 0, 0.58, 1],
+            onUpdate: handleRotationUpdate
+          }
+        });
       }
-
-      // Phase 4: Dramatic return
-      setCurrentPhase(ANIMATION_PHASE.DRAMATIC);
-      await controls.start({
-        rotate: finalTargetRotation,
-        transition: {
-          duration: 1.5 * (1 / config.dramaticSlowdown),
-          ease: [0.42, 0, 0.58, 1],
-          onUpdate: handleRotationUpdate
-        }
-      });
-    }
 
     // Determine winner
     const winnerIdx = getCurrentSegmentIndex(finalTargetRotation);
@@ -376,8 +376,8 @@ export const SpinWheel = ({
   if (segments.length === 0) {
     return (
       <div className="min-h-screen bg-cyan-950 flex flex-col">
-        <div className="flex-1 flex flex-col items-center justify-center p-8">
-          <div className="text-cyan-100 text-lg">Waiting for players...</div>
+        <div className="flex-1 flex flex-col items-center justify-center p-4">
+          <div className="text-cyan-100 text-base">Waiting for players...</div>
         </div>
       </div>
     );
@@ -387,7 +387,7 @@ export const SpinWheel = ({
     <div className="flex flex-col items-center">
       {/* Real-time indicators */}
       {isRealtime && (
-        <div className="pb-4 flex gap-4 text-sm text-cyan-200">
+        <div className="pb-3 flex gap-3 text-xs text-cyan-200">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
             <span>Real-time</span>
@@ -403,8 +403,8 @@ export const SpinWheel = ({
       {/* Wheel Container */}
       <div className="relative">
         <motion.svg
-          width="400"
-          height="400"
+          width="350"
+          height="350"
           viewBox="0 0 400 400"
           animate={controls}
           onUpdate={({ rotate }) => handleRotationUpdate(rotate)}
@@ -421,7 +421,7 @@ export const SpinWheel = ({
 
         {/* Suspense phase indicator */}
         {currentPhase && (
-          <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-xs text-cyan-200">
+          <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-cyan-200">
             {currentPhase === ANIMATION_PHASE.NATURAL && 'Spinning...'}
             {currentPhase === ANIMATION_PHASE.OVERSHOOT && 'Building suspense...'}
             {currentPhase === ANIMATION_PHASE.HESITATION && 'Almost there...'}
@@ -432,8 +432,8 @@ export const SpinWheel = ({
 
       {/* Winner display */}
       {winner && !isSpinning && (
-        <div className="pt-8 p-4 bg-gradient-to-r from-cyan-600 to-cyan-700 rounded-lg text-cyan-50 shadow-lg">
-          <div className="text-2xl font-bold">🎉 Winner: {winner.text || winner.id} 🎉</div>
+        <div className="pt-6 p-3 bg-gradient-to-r from-cyan-600 to-cyan-700 rounded-lg text-cyan-50 shadow-lg">
+          <div className="text-xl font-bold">🎉 Winner: {winner.text || winner.id} 🎉</div>
         </div>
       )}
     </div>
