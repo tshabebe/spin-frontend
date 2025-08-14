@@ -1,35 +1,47 @@
-import React, { useState, useEffect } from "react";
-import { Wheel } from "react-custom-roulette";
+import { useState, useEffect } from "react";
+import SpinWheel from "./SpinWheel";
 import { GiSpinningSword } from "react-icons/gi";
 import { FaArrowLeft, FaCoins, FaTrophy, FaHashtag } from "react-icons/fa";
 import useSound from 'use-sound';
 import spinSound from '../../assets/spin.mp3';
 import winSound from '../../assets/win.mp3';
 
-function Game({ 
-  players = [], 
-  isSpinning = false, 
-  winner = null, 
+function Game({
+  players = [],
+  isSpinning = false,
+  winner = null,
+  suspenseConfig = null,
+  serverCalculationTime = null,
   onSpinComplete = () => {},
   countdown = null,
   gameStatus = 'waiting',
   gameId = null,
   betAmount = 0,
   token = null,
-  onBackClick = () => {}
+  onBackClick = () => {},
+  socket = null,
+  isRealtime = false
 }) {
   const [mustSpin, setMustSpin] = useState(false);
-  const [prizeNumber, setPrizeNumber] = useState(0);
+
   const [localIsSpinning, setLocalIsSpinning] = useState(false);
   const [winningEntry, setWinningEntry] = useState(null);
   const [waitingToSpin, setWaitingToSpin] = useState(false);
-  
+
   // Use sound hooks with the imported audio files
   const [playSpin] = useSound(spinSound, { soundEnabled: true });
   const [playWin] = useSound(winSound, { soundEnabled: true });
 
-  // Create data array from players
-  const data = players.map(player => ({ option: player.username }));
+  // Prepare segments for new wheel
+  const segments = players.map((p, idx) => ({
+    id: `${idx}`,
+    text: p.username,
+    color: idx % 2 === 0 ? '#15803d' : '#f97316',
+    textColor: 'white'
+  }));
+
+  // Determine if we should continue animation for late joiners
+  const shouldContinueAnimation = isRealtime && players.length > 0 && !isSpinning;
 
   // Handle countdown finished - show "Waiting to spin"
   useEffect(() => {
@@ -38,29 +50,29 @@ function Game({
     }
   }, [countdown, gameStatus]);
 
-  // 🎯 NEW: Handle spin start with pre-determined winner
+  // Handle spin start with pre-determined winner from backend
   useEffect(() => {
     if (isSpinning && winner && players.length > 0) {
       // Find the index of the winner in the players array
       const winnerIndex = players.findIndex(player => player.username === winner);
-      
+
       if (winnerIndex !== -1) {
         console.log(`Starting spin to winner: ${winner} at index: ${winnerIndex}`);
-        setPrizeNumber(winnerIndex);
+
         setMustSpin(true);
         setLocalIsSpinning(true);
         setWaitingToSpin(false);
         playSpin();
       }
     }
-  }, [isSpinning, winner, players]);
+  }, [isSpinning, winner, players, playSpin]);
 
   const handleStopSpinning = () => {
     setMustSpin(false);
     setLocalIsSpinning(false);
     setWinningEntry(winner);
     playWin();
-    
+
     // Call parent callback
     onSpinComplete(winner);
   };
@@ -86,9 +98,9 @@ function Game({
             onClick={onBackClick}
             className="flex items-center gap-2 px-3 py-2 bg-[#8a1a2d] rounded-lg hover:bg-[#a72037] transition-colors text-white"
           >
-            <FaArrowLeft /> 
+            <FaArrowLeft />
           </button>
-          
+
           {/* Game Info */}
           <div className="flex items-center gap-6 text-white">
             {/* Game ID */}
@@ -96,7 +108,7 @@ function Game({
               <FaHashtag className="text-blue-400" />
               <span className="font-bold">{gameId}</span>
             </div>
-            
+
             {/* Bet Amount */}
             <div className="flex items-center gap-2 bg-[#1a2332] px-3 py-2 rounded-lg">
               <FaCoins className="text-yellow-400" />
@@ -126,21 +138,18 @@ function Game({
             </div>
           )}
 
-          {/* Wheel Section */}
-          <Wheel
-            mustStartSpinning={mustSpin}
-            prizeNumber={prizeNumber}
-            data={data}
-            onStopSpinning={handleStopSpinning}
-            backgroundColors={["#171d38", "#a72037"]}
-            textColors={["#ffffff"]}
-            outerBorderColor="#0f1423"
-            innerBorderColor="#0f1423"
-            innerRadius={30}
-            radiusLineColor="#0f1423"
-            spinDuration={0.8}
+          {/* Wheel Section with Backend Integration */}
+          <SpinWheel
+            segments={segments}
+            autoSpin={mustSpin}
+            predeterminedWinner={winner}
+            suspenseConfig={suspenseConfig}
+            onSpinComplete={handleStopSpinning}
+            serverCalculationTime={serverCalculationTime}
+            shouldContinueAnimation={shouldContinueAnimation}
+            isRealtime={isRealtime}
           />
-          
+
           {/* Countdown Display - Now below the wheel */}
           {countdown && countdown.remainingSeconds > 0 && (
             <div className="mt-4 text-center">
@@ -152,7 +161,7 @@ function Game({
               </div>
             </div>
           )}
-          
+
           {/* Spinning Status */}
           {(localIsSpinning || isSpinning) && (
             <div className="mt-4 flex items-center gap-2 text-white">
@@ -160,11 +169,11 @@ function Game({
               <span>Spinning...</span>
             </div>
           )}
-          
+
           {/* Winner Display */}
           {winningEntry && !localIsSpinning && !isSpinning && (
-            <div className="mt-4 p-4 bg-[#8a1a2d] rounded-lg text-white">
-              🎉 Winner: {winningEntry} 🎉
+            <div className="mt-4 p-4 bg-gradient-to-r from-green-600 to-green-700 rounded-lg text-white shadow-lg">
+              <div className="text-2xl font-bold">🎉 Winner: {winningEntry} 🎉</div>
             </div>
           )}
         </div>

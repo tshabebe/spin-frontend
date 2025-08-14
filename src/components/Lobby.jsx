@@ -6,8 +6,8 @@ import { GiChessKing } from "react-icons/gi";
 import { io } from "socket.io-client";
 import { API_URL } from "../utils/apiUrl";
 import { useGetUserInfo } from "../utils/getUserinfo";
-import Loading from "./Loading"; 
-import { maskUsername } from "../utils/maskUsername"; 
+import Loading from "./Loading";
+import { maskUsername } from "../utils/maskUsername";
 
 const Lobby = () => {
   const { chatId } = useParams();
@@ -29,13 +29,13 @@ const Lobby = () => {
   } = useGetUserInfo(token);
 
   const [recentGames, setRecentGames] = useState([]);
-  const [gamesError, setGamesError] = useState(null); 
+  const [gamesError, setGamesError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [joiningGameId, setJoiningGameId] = useState(null); 
+  const [joiningGameId, setJoiningGameId] = useState(null);
   const [socket, setSocket] = useState(null);
   const [gameCountdowns, setGameCountdowns] = useState({});
 
- 
+
   // Update socket connection effect
   useEffect(() => {
     if (!token) return;
@@ -62,7 +62,7 @@ const Lobby = () => {
     newSocket.on('gameStateUpdate', ({ game }) => {
       // Update the specific game in the list
       setRecentGames(prevGames => {
-        const updatedGames = prevGames.map(g => 
+        const updatedGames = prevGames.map(g =>
           g.gameId === game.gameId ? game : g
         );
         return updatedGames;
@@ -74,7 +74,7 @@ const Lobby = () => {
       console.log('Spin started:', message);
       // Update game state
       setRecentGames(prevGames => {
-        const updatedGames = prevGames.map(g => 
+        const updatedGames = prevGames.map(g =>
           g.gameId === game.gameId ? game : g
         );
         return updatedGames;
@@ -86,7 +86,7 @@ const Lobby = () => {
       console.log('Spin completed:', message);
       // Update game state
       setRecentGames(prevGames => {
-        const updatedGames = prevGames.map(g => 
+        const updatedGames = prevGames.map(g =>
           g.gameId === game.gameId ? game : g
         );
         return updatedGames;
@@ -124,7 +124,7 @@ const Lobby = () => {
     newSocket.on('gameFinished', ({ game, winner, reason, payoutInfo }) => {
       console.log('Game finished:', reason);
       // Remove finished games from lists
-      setRecentGames(prevGames => 
+      setRecentGames(prevGames =>
         prevGames.filter(g => g.gameId !== game.gameId)
       );
       // Clean up countdown state
@@ -140,7 +140,7 @@ const Lobby = () => {
       console.log('Player left:', message);
       // Update game state
       setRecentGames(prevGames => {
-        const updatedGames = prevGames.map(g => 
+        const updatedGames = prevGames.map(g =>
           g.gameId === game.gameId ? game : g
         );
         return updatedGames;
@@ -160,7 +160,7 @@ const Lobby = () => {
     };
   }, [token, user?.username]);
 
- 
+
 
   // Updated fetchRecentGames to use the new /recent route
   const fetchRecentGames = async () => {
@@ -168,25 +168,25 @@ const Lobby = () => {
     try {
       console.log('🔍 Fetching recent games from:', `${API_URL}/api/games/recent`);
       console.log('🔍 Using token:', token ? 'Token present' : 'No token');
-      
+
       const response = await fetch(`${API_URL}/api/games/recent`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       console.log('🔍 Response status:', response.status);
       console.log('🔍 Response ok:', response.ok);
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('🔍 Error response:', errorText);
         throw new Error("Failed to fetch recent games");
       }
-      
+
       const data = await response.json();
       console.log('🔍 Received games data:', data);
-      
+
       // Handle the new response format
       if (data.success && data.games) {
         console.log('🔍 Number of games:', data.games.length);
@@ -196,7 +196,7 @@ const Lobby = () => {
           players: game.players?.length || 0,
           betAmount: game.betAmount
         })));
-        
+
         setRecentGames(data.games);
       } else {
         console.error('🔍 Invalid response format:', data);
@@ -221,12 +221,12 @@ const Lobby = () => {
   };
 
   useEffect(() => {
-    if (!userLoading && user) { 
+    if (!userLoading && user) {
       fetchRecentGames();
     }
   }, [user, userLoading]);
 
- 
+
 
   const handleJoinGame = async (gameId, stakeAmount) => {
     setJoiningGameId(gameId);
@@ -237,7 +237,7 @@ const Lobby = () => {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           username: user?.username,
           chatId: user?.chatId
         })
@@ -246,7 +246,7 @@ const Lobby = () => {
       const data = await response.json();
 
       if (!response.ok) {
-       
+
         throw new Error(data.error || "Join failed");
       }
 
@@ -260,7 +260,7 @@ const Lobby = () => {
     }
   };
 
- 
+
 
   // Add helper function to check if user is in game
   const isUserInGame = (game) => {
@@ -268,7 +268,7 @@ const Lobby = () => {
     return game.players.some(player => player.chatId === user.chatId);
   };
 
- 
+
 
   // Early return for token error
   if (tokenError) {
@@ -294,7 +294,7 @@ const Lobby = () => {
       </div>
     );
   }
- 
+
 
   // Add: text-based avatar function
   const getTextAvatar = (username) => {
@@ -304,11 +304,11 @@ const Lobby = () => {
 
   return (
     <div className="min-h-screen bg-[#0A0B1A] text-white p-3 sm:p-6">
-      <div className="max-w-4xl mx-auto"> 
+      <div className="max-w-4xl mx-auto">
 
         <div className=" rounded-xl mb-3">
           <div className="flex items-center justify-between gap-2 mb-2">
-            <div className="flex items-center gap-2"> 
+            <div className="flex items-center gap-2">
               <div className="flex items-center gap-1 bg-[#252642] p-2 rounded-lg text-sm">
                 <FaCoins size={12} className="text-yellow-400" />
                 <span>{Number(user?.balance).toFixed(2)}</span>
@@ -316,12 +316,12 @@ const Lobby = () => {
             </div>
 
             {/* User Info - Smaller text */}
-            <div className="flex items-center gap-2"> 
+            <div className="flex items-center gap-2">
 
               <button
                 onClick={handleRefresh}
                 disabled={isLoading}
-                className="bg-blue-500 p-2 rounded-lg flex items-center justify-center gap-1 hover:opacity-90 active:scale-95 
+                className="bg-blue-500 p-2 rounded-lg flex items-center justify-center gap-1 hover:opacity-90 active:scale-95
                          transition-all disabled:opacity-50 text-sm font-medium text-black"
               >
                 <FaSync size={14} className={isLoading ? "animate-spin" : ""} />
@@ -331,17 +331,17 @@ const Lobby = () => {
               {/* Demo Button */}
               <button
                 onClick={() => window.location.href = '/roulette-demo'}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 p-2 rounded-lg flex items-center justify-center gap-1 hover:opacity-90 active:scale-95 
+                className="bg-gradient-to-r from-purple-500 to-pink-500 p-2 rounded-lg flex items-center justify-center gap-1 hover:opacity-90 active:scale-95
                          transition-all text-sm font-medium text-white shadow-lg"
               >
                 <FaGamepad size={14} />
                 <span className="sr-only">Demo</span>
               </button>
-             
+
             </div>
           </div>
         </div>
- 
+
 
         {/* Games Sections - Mobile optimized cards */}
         <div className="space-y-6">
@@ -364,7 +364,7 @@ const Lobby = () => {
                     key={`public-${game.gameId}`}
                     className={`relative overflow-hidden rounded-lg p-2.5 mb-2
                                bg-[#1A1B2E]/30 backdrop-blur-md
-                               border border-white/5 
+                               border border-white/5
                                shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]
                                transition-all duration-300 hover:bg-[#1A1B2E]/40
                                animate-border-glow
@@ -390,7 +390,7 @@ const Lobby = () => {
                       <div className="flex flex-col items-center w-24">
                         <div className="relative mb-0.5">
                           <div
-                            className="w-8 h-8 rounded-lg overflow-hidden 
+                            className="w-8 h-8 rounded-lg overflow-hidden
                                         bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg
                                         border border-white/10 flex items-center justify-center"
                           >
@@ -412,7 +412,7 @@ const Lobby = () => {
                           {maskUsername(game.players[0]?.username)}
                         </span>
                         <span
-                          className="text-[10px] text-yellow-400 
+                          className="text-[10px] text-yellow-400
                                        drop-shadow-[0_0_2px_rgba(234,179,8,0.3)]"
                         >
                           {game.betAmount} ብር
@@ -431,7 +431,7 @@ const Lobby = () => {
                           isUserInGame(game) ? (
                             <button
                               onClick={() => window.location.href = `/spin-wheel/${game.gameId}?token=${token}`}
-                              className="px-4 py-1 bg-green-500/90 text-white rounded-full text-[10px] 
+                              className="px-4 py-1 bg-green-500/90 text-white rounded-full text-[10px]
                                        hover:bg-green-500 active:scale-95 transition-all
                                        min-w-[60px] flex items-center justify-center
                                        shadow-[0_0_10px_rgba(34,197,94,0.3)]
@@ -443,7 +443,7 @@ const Lobby = () => {
                             <button
                               onClick={() => handleJoinGame(game.gameId, game.betAmount)}
                               disabled={joiningGameId === game.gameId}
-                              className="px-4 py-1 bg-blue-500/90 text-white rounded-full text-[10px] 
+                              className="px-4 py-1 bg-blue-500/90 text-white rounded-full text-[10px]
                                        hover:bg-blue-500 active:scale-95 transition-all disabled:opacity-50
                                        min-w-[60px] flex items-center justify-center
                                        shadow-[0_0_10px_rgba(59,130,246,0.3)]
@@ -504,7 +504,7 @@ const Lobby = () => {
                 <p className="text-gray-500 text-center py-4">
                   {isLoading ? 'Loading games...' : 'No spin games available'}
                 </p>
-               
+
               </div>
             )}
           </div>

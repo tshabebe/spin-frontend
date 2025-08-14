@@ -29,6 +29,8 @@ const SpinWheelGame = () => {
   const [sparkles, setSparkles] = useState([]);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [winnerData, setWinnerData] = useState(null);
+  const [suspenseConfig, setSuspenseConfig] = useState(null);
+  const [serverCalculationTime, setServerCalculationTime] = useState(null);
 
   // Wheel state
   const [mustSpin, setMustSpin] = useState(false);
@@ -101,12 +103,15 @@ const SpinWheelGame = () => {
       setLoading(false);
     });
 
-    newSocket.on('spinStarted', ({ game, winner, winnerIndex, spinAngle, message }) => {
+    newSocket.on('spinStarted', ({ game, winner, winnerIndex, spinAngle, message, suspenseConfig, calculationTime }) => {
       console.log('Spin started with winner:', winner, 'at index:', winnerIndex);
       setGame(game);
       setIsSpinning(true);
       setWinner(winner);
       setPrizeNumber(winnerIndex);
+      // Set suspense configuration from backend
+      setSuspenseConfig(suspenseConfig || { type: 'moderate' });
+      setServerCalculationTime(calculationTime || null);
     });
 
     newSocket.on('spinCompleted', ({ game, spinResult, payoutInfo, message }) => {
@@ -120,14 +125,12 @@ const SpinWheelGame = () => {
     newSocket.on('spinInProgress', ({ game, spinStartTime, spinDuration }) => {
       setGame(game);
       setIsSpinning(true);
-      // 🎯 NEW: Use the pre-determined winner from the game state
+      // Use the pre-determined winner from the game state
       if (game.winner) {
         const winnerIndex = game.players.findIndex(p => p.username === game.winner);
         if (winnerIndex !== -1) {
           setPrizeNumber(winnerIndex);
-          // 🎯 REMOVED: Let Game component handle wheel animation
-          // setMustSpin(true);
-          // playSpin();
+          setWinner(game.winner);
         }
       }
     });
@@ -325,22 +328,33 @@ const SpinWheelGame = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#17212b]">
-      {/* Game Component */}
-      <Game
-        players={game.players || []}
-        isSpinning={isSpinning}
-        winner={winner}
-        onSpinComplete={handleGameSpinComplete}
-        countdown={countdown}
-        gameStatus={game.status}
-        gameId={game.gameId}
-        betAmount={game.betAmount || 0}
-        token={token}
-        onBackClick={() => navigate(`/lobby?token=${token}`)}
-      />
-    </div>
+    <>
+      {loading ? (
+        <Loading />
+      ) : error ? (
+        <div className="min-h-screen bg-[#17212b] flex items-center justify-center">
+          <div className="text-red-500 text-xl">{error}</div>
+        </div>
+      ) : (
+        <Game
+          players={game?.players || []}
+          isSpinning={isSpinning}
+          winner={winner}
+          suspenseConfig={suspenseConfig}
+          serverCalculationTime={serverCalculationTime}
+          onSpinComplete={handleSpinComplete}
+          countdown={countdown}
+          gameStatus={game?.status || 'waiting'}
+          gameId={gameId}
+          betAmount={game?.betAmount || 0}
+          token={token}
+          onBackClick={() => navigate('/lobby')}
+          socket={socket}
+          isRealtime={true}
+        />
+      )}
+    </>
   );
 };
 
-export default SpinWheelGame; 
+export default SpinWheelGame;
