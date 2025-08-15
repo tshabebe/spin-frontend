@@ -59,7 +59,7 @@ function Game({
         setWaitingToSpin(false);
       }
     }
-  }, [isSpinning, winner, players, playSpin]);
+  }, [isSpinning, winner, players]);
 
   const handleStopSpinning = () => {
     setMustSpin(false);

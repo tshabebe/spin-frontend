@@ -402,22 +402,26 @@ export const SpinWheel = ({
 
       {/* Wheel Container */}
       <div className="relative">
-        <motion.svg
-          width="350"
-          height="350"
+        <svg
+          width="400"
+          height="400"
           viewBox="0 0 400 400"
-          animate={controls}
-          onUpdate={({ rotate }) => handleRotationUpdate(rotate)}
-          style={{ filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3))' }}
+          className="drop-shadow-2xl"
         >
-          {/* Wheel segments */}
-          {segments.map((segment, index) => (
-            <WheelSegment key={segment.id} segment={segment} index={index} segments={segments} />
-          ))}
+          <motion.g
+            animate={controls}
+            onUpdate={({ rotate }) => handleRotationUpdate(rotate)}
+            style={{ transformOrigin: '200px 200px' }}
+          >
+            {/* Wheel segments */}
+            {segments.map((segment, index) => (
+              <WheelSegment key={segment.id} segment={segment} index={index} segments={segments} />
+            ))}
+          </motion.g>
 
           {/* Center and pointer */}
           <WheelCenter currentSegment={currentSegment} />
-        </motion.svg>
+        </svg>
 
         {/* Suspense phase indicator */}
         {currentPhase && (

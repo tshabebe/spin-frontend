@@ -11,11 +11,14 @@ import {
   FaSpinner,
 } from 'react-icons/fa'
 import { GiChessKing } from 'react-icons/gi'
+import { FaQuestionCircle } from 'react-icons/fa'
 import { io } from 'socket.io-client'
 import { API_URL } from '../utils/apiUrl'
 import { useGetUserInfo } from '../utils/getUserinfo'
 import Loading from './Loading'
+import RulesModal from './RulesModal'
 import { maskUsername } from '../utils/maskUsername'
+import Transactions from './Transactions'
 
 // Simple component for user balance display
 const UserBalance = ({ balance }) => (
@@ -28,8 +31,15 @@ const UserBalance = ({ balance }) => (
 )
 
 // Simple component for action buttons
-const ActionButtons = ({ onRefresh, isLoading, onDemoClick }) => (
+const ActionButtons = ({ onRefresh, isLoading, onOpenRules }) => (
   <div className="flex items-center gap-3">
+    <button
+      onClick={onOpenRules}
+      className="flex justify-center items-center bg-cyan-700 active:bg-cyan-600 p-3 rounded-lg text-cyan-50"
+      aria-label="Rules"
+    >
+      <FaQuestionCircle size={16} />
+    </button>
     <button
       onClick={onRefresh}
       disabled={isLoading}
@@ -38,13 +48,58 @@ const ActionButtons = ({ onRefresh, isLoading, onDemoClick }) => (
       <FaSync size={14} className={isLoading ? 'animate-spin' : ''} />
       <span className="sr-only">Reload</span>
     </button>
+  </div>
+)
 
+// Create Game Panel
+const betOptions = [20, 30, 50, 100, 200, 500]
+const CreateGamePanel = ({
+  selectedBet,
+  setSelectedBet,
+  onCreate,
+  isCreating,
+  balance,
+}) => (
+  <div className="flex flex-col gap-4 bg-cyan-900 p-4 rounded-xl">
+    <div className="gap-3 grid grid-cols-3">
+      {betOptions.map((bet) => {
+        const active = selectedBet === bet
+        return (
+          <button
+            key={bet}
+            className={`rounded-lg py-3 text-sm font-semibold transition-colors ring-1 ${
+              active
+                ? 'bg-cyan-700 ring-amber-300/60 text-cyan-50'
+                : 'bg-cyan-800 ring-cyan-700 text-cyan-200 active:bg-cyan-700'
+            }`}
+            onClick={() => setSelectedBet(bet)}
+            disabled={isCreating}
+          >
+            <span className={`${active ? 'text-amber-200' : 'text-cyan-100'}`}>
+              {bet} ETB
+            </span>
+          </button>
+        )
+      })}
+    </div>
+
+    {/** Debit happens on join, not create **/}
     <button
-      onClick={onDemoClick}
-      className="flex justify-center items-center bg-cyan-600 active:bg-cyan-500 p-3 rounded-lg font-semibold text-cyan-50 text-sm transition-colors"
+      onClick={onCreate}
+      disabled={!selectedBet || isCreating}
+      className={`w-full flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold transition-colors ring-1 ${
+        !selectedBet || isCreating
+          ? 'bg-cyan-800 text-cyan-300 opacity-60 ring-cyan-700'
+          : 'bg-cyan-600 active:bg-cyan-500 text-cyan-50 ring-amber-300/50'
+      }`}
     >
-      <FaGamepad size={14} />
-      <span className="sr-only">Demo</span>
+      <FaPlus size={14} />
+      Create Game{' '}
+      {selectedBet ? (
+        <span className="bg-amber-400/20 px-2 py-0.5 rounded-full text-amber-200">
+          {selectedBet} ETB
+        </span>
+      ) : null}
     </button>
   </div>
 )
@@ -63,7 +118,7 @@ const GameStatus = ({
     return isUserInGame(game) ? (
       <button
         onClick={() => onRejoinGame(game.gameId, token)}
-        className="flex justify-center items-center bg-cyan-500 active:bg-cyan-600 px-3 py-1 rounded-full min-w-[50px] font-semibold text-cyan-50 text-xs transition-colors"
+        className="flex justify-center items-center bg-amber-800 active:bg-amber-900 px-3 py-1 rounded-full min-w-[50px] font-bold text-amber-100 text-xs transition-colors"
       >
         Rejoin
       </button>
@@ -94,7 +149,7 @@ const GameStatus = ({
     gameCountdowns[game.gameId].remainingSeconds > 0
   ) {
     return (
-      <div className="font-bold text-cyan-300 text-xs animate-pulse">
+      <div className="font-bold text-amber-300 text-xs animate-pulse">
         ⏰ {gameCountdowns[game.gameId].remainingSeconds}s
       </div>
     )
@@ -103,33 +158,10 @@ const GameStatus = ({
   return null
 }
 
-// Simple component for player avatar
-const PlayerAvatar = ({ player, isCreator }) => (
-  <div className="relative">
-    <div className="flex justify-center items-center bg-cyan-600 shadow-lg rounded-lg w-8 h-8 overflow-hidden">
-      <span className="font-semibold text-cyan-50 text-sm">
-        {player?.username?.charAt(0).toUpperCase() || '?'}
-      </span>
-    </div>
-    {isCreator && (
-      <span className="-top-1 -right-1 absolute text-cyan-300 text-xs">👑</span>
-    )}
-  </div>
-)
-
-// Simple component for stake information (kept for potential reuse elsewhere)
-const StakeInfo = ({ betAmount, maxPrize }) => (
-  <div className="flex flex-col flex-shrink-0 items-end w-24">
-    <div className="text-center">
-      <span className="block font-semibold text-cyan-200 text-xs">Bet</span>
-      <div className="font-semibold text-cyan-300 text-sm">{betAmount} ብር</div>
-    </div>
-    <div className="pt-1 text-center">
-      <span className="block font-semibold text-cyan-200 text-xs">
-        Max Prize
-      </span>
-      <div className="font-semibold text-cyan-400 text-sm">{maxPrize} ብር</div>
-    </div>
+// Simple component for creator indicator
+const CreatorIndicator = ({ isCreator }) => (
+  <div className="flex items-center gap-1">
+    {isCreator && <span className="text-amber-300 text-xs">👑</span>}
   </div>
 )
 
@@ -145,43 +177,66 @@ const GameCard = ({
 }) => (
   <div
     className={`relative overflow-hidden rounded-lg p-4
-               bg-cyan-900 transition-colors duration-300
-               ${isUserInGame(game) ? 'bg-cyan-900/90' : ''}`}
+               transition-colors bg-cyan-800 duration-300 min-w-52
+               ${isUserInGame(game) ? 'bg-amber-800' : ''}`}
   >
-    {/* You're in this game badge */}
-    {isUserInGame(game) && (
-      <div className="top-2 right-2 z-10 absolute">
-        <span className="bg-cyan-500 px-2 py-1 rounded-full font-semibold text-cyan-50 text-xs">
-          You're in!
-        </span>
-      </div>
-    )}
-
-    {/* Game Card Content - Horizontal flow */}
-    <div className="flex justify-between items-center">
-      {/* Left Player Section */}
-      <div className="flex flex-col flex-shrink-0 items-center w-20">
-        <PlayerAvatar
-          player={game.players[0]}
-          isCreator={game.creator === game.players[0]?.username}
-        />
-        <span className="pt-1 font-semibold text-cyan-200 text-xs">
-          {maskUsername(game.players[0]?.username)}
-        </span>
-        <span className="font-semibold text-cyan-300 text-xs">
-          {game.betAmount} ብር
-        </span>
-      </div>
-
-      {/* Center Game Info - Vertical flow */}
-      <div className="flex flex-col flex-1 justify-center items-center min-w-[60px]">
-        <div className="flex justify-center items-center pb-1 h-5">
-          <FaSpinner className="drop-shadow-[0_0_3px_rgba(34,211,238,0.5)] text-cyan-400 text-lg" />
-        </div>
-        <div className="pb-1 font-semibold text-cyan-300 text-xs">
-          Spin ({game.players.length}/{game.maxPlayers})
+    {/* Game Card Content - Modern Layout */}
+    <div className="flex flex-col gap-4">
+      {/* Top Section - Game Status & Player Info */}
+      <div className="flex justify-between items-center">
+        {/* Left - Player Count & Game ID */}
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2">
+            <span className="font-black text-lg">
+              {game.players.length}/{game.maxPlayers}
+            </span>
+            <CreatorIndicator
+              isCreator={game.creator === game.players[0]?.username}
+            />
+          </div>
+          <div className="font-semibold text-amber-200 text-xs">
+            Game #{game.gameId}
+          </div>
         </div>
 
+        {/* Right - Active Status Indicator */}
+        {isUserInGame(game) && (
+          <div className="flex items-center gap-2">
+            <div className="bg-amber-400 rounded-full w-2 h-2 animate-pulse"></div>
+            <span className="font-semibold text-amber-200 text-xs">Active</span>
+          </div>
+        )}
+      </div>
+
+      {/* Middle Section - Bet Information */}
+      <div className="bg-cyan-700 p-3 rounded-lg">
+        <div className="flex justify-between items-center">
+          <div className="flex flex-col">
+            <span className="font-semibold text-cyan-200 text-xs">
+              Bet Amount
+            </span>
+            <div className="font-semibold text-cyan-100 text-sm">
+              {game.betAmount} ብር
+            </div>
+          </div>
+          <div className="flex flex-col items-end">
+            <span className="font-semibold text-amber-200 text-xs">
+              Max Prize
+            </span>
+            <div className="font-semibold text-amber-300 text-sm">
+              {Math.round(game.betAmount * game.players.length * 0.9)} ብር
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Section - Game Status & Actions */}
+      <div className="flex justify-between items-center">
+        <span className="font-semibold text-amber-300 text-xs">
+          {game.status === 'waiting' ? 'Waiting' : game.status}
+        </span>
+
+        {/* Game Status Component */}
         <GameStatus
           game={game}
           isUserInGame={isUserInGame}
@@ -191,22 +246,6 @@ const GameCard = ({
           token={token}
           gameCountdowns={gameCountdowns}
         />
-      </div>
-
-      {/* Right Stake Info */}
-      <div className="flex flex-col flex-shrink-0 items-end w-20">
-        <div className="text-center">
-          <span className="block font-semibold text-cyan-200 text-xs">Bet</span>
-          <div className="font-semibold text-cyan-300 text-sm">
-            {game.betAmount} ብር
-          </div>
-        </div>
-        <div className="pt-1 text-center">
-          <span className="block font-semibold text-cyan-200 text-xs">Max</span>
-          <div className="font-semibold text-cyan-400 text-sm">
-            {game.betAmount * game.players.length * 0.9} ብር
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -222,19 +261,21 @@ const GamesList = ({
   token,
   gameCountdowns,
 }) => (
-  <div className="flex flex-col flex-1 gap-3 bg-cyan-950 p-3 rounded-xl">
-    {games.map((game) => (
-      <GameCard
-        key={`public-${game.gameId}`}
-        game={game}
-        isUserInGame={isUserInGame}
-        onJoinGame={onJoinGame}
-        onRejoinGame={onRejoinGame}
-        joiningGameId={joiningGameId}
-        token={token}
-        gameCountdowns={gameCountdowns}
-      />
-    ))}
+  <div className="flex flex-col flex-1 gap-3 bg-cyan-900 p-3 rounded-xl max-h-96 overflow-y-auto">
+    {games
+      .filter((g) => g.status !== 'completed' && g.status !== 'cancelled')
+      .map((game) => (
+        <GameCard
+          key={`public-${game.gameId}`}
+          game={game}
+          isUserInGame={isUserInGame}
+          onJoinGame={onJoinGame}
+          onRejoinGame={onRejoinGame}
+          joiningGameId={joiningGameId}
+          token={token}
+          gameCountdowns={gameCountdowns}
+        />
+      ))}
   </div>
 )
 
@@ -281,6 +322,9 @@ const Lobby = () => {
   const [joiningGameId, setJoiningGameId] = useState(null)
   const [socket, setSocket] = useState(null)
   const [gameCountdowns, setGameCountdowns] = useState({})
+  const [selectedBet, setSelectedBet] = useState(null)
+  const [isCreating, setIsCreating] = useState(false)
+  const [showRules, setShowRules] = useState(false)
 
   // Socket connection logic
   useEffect(() => {
@@ -403,45 +447,26 @@ const Lobby = () => {
   const fetchRecentGames = async () => {
     setIsLoading(true)
     try {
-      console.log(
-        '🔍 Fetching recent games from:',
-        `${API_URL}/api/games/recent`,
-      )
-      console.log('🔍 Using token:', token ? 'Token present' : 'No token')
-
       const response = await fetch(`${API_URL}/api/games/recent`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       })
 
-      console.log('🔍 Response status:', response.status)
-      console.log('🔍 Response ok:', response.ok)
-
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('🔍 Error response:', errorText)
-        throw new Error('Failed to fetch recent games')
+        throw new Error(errorText || 'Failed to fetch recent games')
       }
 
       const data = await response.json()
-      console.log('🔍 Received games data:', data)
-
       if (data.success && data.games) {
-        console.log('🔍 Number of games:', data.games.length)
-        console.log(
-          '🔍 Games details:',
-          data.games.map((game) => ({
-            gameId: game.gameId,
-            status: game.status,
-            players: game.players?.length || 0,
-            betAmount: game.betAmount,
-          })),
+        // Filter out finished games just in case
+        setRecentGames(
+          (data.games || []).filter(
+            (g) => g.status !== 'completed' && g.status !== 'cancelled',
+          ),
         )
-
-        setRecentGames(data.games)
       } else {
-        console.error('🔍 Invalid response format:', data)
         throw new Error('Invalid response format')
       }
     } catch (error) {
@@ -497,8 +522,62 @@ const Lobby = () => {
   }
 
   const handleRejoinGame = (gameId, token) => {
-    // Use navigate instead of window.location for better mobile experience
     window.location.href = `/spin-wheel/${gameId}?token=${token}`
+  }
+
+  const handleCreateGame = async () => {
+    if (!selectedBet || isCreating) return
+    setIsCreating(true)
+    setGamesError(null)
+
+    // Optimistic placeholder
+    const tempId = Math.floor(Math.random() * 1000000)
+    const optimistic = {
+      gameId: tempId,
+      status: 'waiting',
+      creator: user?.username || 'you',
+      players: [],
+      maxPlayers: 10,
+      minPlayers: 2,
+      betAmount: selectedBet,
+    }
+    setRecentGames((prev) => [optimistic, ...prev])
+
+    try {
+      const res = await fetch(`${API_URL}/api/games/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ betAmount: selectedBet }),
+      })
+
+      if (!res.ok) {
+        const text = await res.text()
+        // Map 402 to insufficient balance for clearer UX
+        if (res.status === 402 || /insufficient/i.test(text)) {
+          throw new Error('Insufficient balance to create game')
+        }
+        throw new Error(text || 'Failed to create game')
+      }
+      const created = await res.json()
+      // Replace optimistic with real game
+      setRecentGames((prev) => [
+        created,
+        ...prev.filter((g) => g.gameId !== tempId),
+      ])
+      setSelectedBet(null)
+      // Refresh profile to reflect new balance
+      await refreshUserInfo()
+    } catch (e) {
+      console.error('Create game failed:', e)
+      // Rollback optimistic
+      setRecentGames((prev) => prev.filter((g) => g.gameId !== tempId))
+      setGamesError(e.message || 'Failed to create game')
+    } finally {
+      setIsCreating(false)
+    }
   }
 
   const isUserInGame = (game) => {
@@ -506,7 +585,6 @@ const Lobby = () => {
     return game.players.some((player) => player.chatId === user.chatId)
   }
 
-  // Early returns for error states
   if (tokenError) {
     return (
       <div className="flex flex-col bg-cyan-950 min-h-screen text-cyan-100">
@@ -535,24 +613,31 @@ const Lobby = () => {
 
   // Main render - focused on composition
   return (
-    <div className="flex flex-col bg-cyan-950 min-h-screen text-cyan-100">
-      <div className="flex flex-col flex-1 mx-auto p-6 max-w-4xl">
+    <div className="flex justify-center bg-cyan-950 min-h-screen text-cyan-100">
+      <div className="flex flex-col flex-1 p-6 max-w-xs">
         {/* Header Section - Horizontal flow */}
         <div className="flex justify-between items-center bg-cyan-900 p-4 rounded-xl">
           <UserBalance balance={user?.balance} />
           <ActionButtons
             onRefresh={handleRefresh}
             isLoading={isLoading}
-            onDemoClick={() => (window.location.href = '/demo')}
+            onOpenRules={() => setShowRules(true)}
+          />
+        </div>
+
+        {/* Create Game Panel */}
+        <div className="pt-4">
+          <CreateGamePanel
+            selectedBet={selectedBet}
+            setSelectedBet={setSelectedBet}
+            onCreate={handleCreateGame}
+            isCreating={isCreating}
+            balance={user?.balance}
           />
         </div>
 
         {/* Main Content - Vertical flow */}
         <div className="flex flex-col flex-1 pt-6">
-          <h2 className="pb-4 font-semibold text-cyan-100 text-base">
-            Active Spin Games
-          </h2>
-
           {isLoading ? (
             <LoadingState />
           ) : gamesError ? (
@@ -570,8 +655,13 @@ const Lobby = () => {
           ) : (
             <EmptyState isLoading={isLoading} />
           )}
+
+          <div className="pt-6">
+            <Transactions token={token} />
+          </div>
         </div>
       </div>
+      <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
     </div>
   )
 }
