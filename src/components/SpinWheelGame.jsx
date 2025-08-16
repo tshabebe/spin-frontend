@@ -251,7 +251,7 @@ const SpinWheelGame = () => {
           gameId={gameId}
           betAmount={game?.betAmount || 0}
           token={token}
-          onBackClick={() => navigate('/lobby')}
+          onBackClick={() => navigate(`/lobby?token=${token}`)}
           socket={socket}
           isRealtime={true}
           currentUsername={currentUser?.username}
