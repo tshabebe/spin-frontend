@@ -186,24 +186,18 @@ export const SpinWheel = ({
   const lastSegmentRef = useRef(-1);
   const { playTickSound, playWinSound, playDramaticSound } = useWheelSounds();
 
-  // Idle rotation that can be paused/resumed
+  // Idle rotation only during countdown (shouldContinueAnimation). Do not interfere while spinning.
   useEffect(() => {
-    if (!isSpinning) {
-      if (shouldContinueAnimation && !isPausedForLateJoin) {
-        // Resume idle rotation for late-joining players
-        controls.start({
-          rotate: [currentRotation, currentRotation + 360],
-          transition: { duration: 120, ease: 'linear', repeat: Infinity }
-        });
-      } else if (!shouldContinueAnimation) {
-        // Normal idle rotation
-        controls.start({
-          rotate: [currentRotation, currentRotation + 360],
-          transition: { duration: 120, ease: 'linear', repeat: Infinity }
-        });
-      }
+    if (isSpinning) return; // don't touch controls during main spin
+    if (shouldContinueAnimation && !isPausedForLateJoin) {
+      controls.start({
+        rotate: [0, 360],
+        transition: { duration: 120, ease: 'linear', repeat: Infinity }
+      });
+    } else {
+      controls.stop();
     }
-  }, [isSpinning, shouldContinueAnimation, isPausedForLateJoin, currentRotation]);
+  }, [shouldContinueAnimation, isPausedForLateJoin, isSpinning]);
 
   const segmentAngle = segments.length > 0 ? 360 / segments.length : 36;
 
@@ -218,16 +212,11 @@ export const SpinWheel = ({
   const handleRotationUpdate = useCallback(rot => {
     const idx = getCurrentSegmentIndex(rot);
     if (idx !== lastSegmentRef.current && isSpinning) {
-      // Play different sounds based on current phase
-      if (currentPhase === ANIMATION_PHASE.DRAMATIC) {
-        playDramaticSound();
-      } else {
-        playTickSound();
-      }
+      playTickSound();
       lastSegmentRef.current = idx;
     }
     setCurrentRotation(rot);
-  }, [getCurrentSegmentIndex, isSpinning, currentPhase, playTickSound, playDramaticSound]);
+  }, [getCurrentSegmentIndex, isSpinning, playTickSound]);
 
   // Get suspense configuration
   const getSuspenseConfig = () => {
@@ -274,31 +263,27 @@ export const SpinWheel = ({
     return configs[type] || configs[SUSPENSE_TYPES.MODERATE];
   };
 
-  // Core spin logic with suspense animation phases
+  // Core spin logic simplified: stop idle, single ease-out to winner
   const spinWheel = async () => {
     if (isSpinning || segments.length === 0) return;
     setIsSpinning(true);
     setIsPausedForLateJoin(false);
+    controls.stop();
     lastSegmentRef.current = -1;
 
-    const config = getSuspenseConfig();
     let finalTargetRotation;
-    const baseRotations = config.baseRotations + Math.random() * config.rotationVariance;
+    const baseRotations = 5;
 
     if (predeterminedWinner) {
       const winnerIndex = segments.findIndex(s => s.text === predeterminedWinner || s.id === predeterminedWinner);
       if (winnerIndex !== -1) {
-        // Calculate exact rotation to land on winner
         let found = null;
-        for (let a = 0; a < 360; a += 5) {
+        for (let a = 0; a < 360; a += 1) {
           const test = currentRotation + baseRotations * 360 + a;
           const idx = getCurrentSegmentIndex(test);
-          if (idx === winnerIndex) {
-            found = test;
-            break;
-          }
+          if (idx === winnerIndex) { found = test; break; }
         }
-        finalTargetRotation = found || currentRotation + baseRotations * 360 + winnerIndex * segmentAngle;
+        finalTargetRotation = found ?? (currentRotation + baseRotations * 360);
       } else {
         finalTargetRotation = currentRotation + baseRotations * 360 + Math.random() * 360;
       }
@@ -306,59 +291,17 @@ export const SpinWheel = ({
       finalTargetRotation = currentRotation + baseRotations * 360 + Math.random() * 360;
     }
 
-    // Phase 1: Natural spin
-    setCurrentPhase(ANIMATION_PHASE.NATURAL);
     await controls.start({
       rotate: finalTargetRotation,
-      transition: {
-        duration: 2.5 + config.baseRotations * 0.4,
-        ease: [0.25, 0.1, 0.25, 1],
-        onUpdate: handleRotationUpdate
-      }
+      transition: { duration: 3.2, ease: 'easeOut', onUpdate: latest => handleRotationUpdate(latest.rotate ?? latest) }
     });
 
-          // Phase 2: Overshoot (if configured)
-      if (config.overshoot > 0) {
-        setCurrentPhase(ANIMATION_PHASE.OVERSHOOT);
-        const overshootTarget = finalTargetRotation + config.overshoot;
-        await controls.start({
-          rotate: overshootTarget,
-          transition: {
-            duration: 0.6,
-            ease: 'easeOut',
-            onUpdate: handleRotationUpdate
-          }
-        });
-
-        // Phase 3: Hesitation pause
-        if (config.hesitationDuration > 0) {
-          setCurrentPhase(ANIMATION_PHASE.HESITATION);
-          await new Promise(resolve => setTimeout(resolve, config.hesitationDuration * 1000));
-        }
-
-        // Phase 4: Dramatic return
-        setCurrentPhase(ANIMATION_PHASE.DRAMATIC);
-        await controls.start({
-          rotate: finalTargetRotation,
-          transition: {
-            duration: 1.2 * (1 / config.dramaticSlowdown),
-            ease: [0.42, 0, 0.58, 1],
-            onUpdate: handleRotationUpdate
-          }
-        });
-      }
-
-    // Determine winner
     const winnerIdx = getCurrentSegmentIndex(finalTargetRotation);
     const winnerSegment = segments[winnerIdx];
     setWinner(winnerSegment);
-    setCurrentPhase(null);
     playWinSound();
     setIsSpinning(false);
-
-    if (onSpinComplete) {
-      onSpinComplete(winnerSegment.text || winnerSegment.id);
-    }
+    if (onSpinComplete) onSpinComplete(winnerSegment.text || winnerSegment.id);
   };
 
   // Trigger auto spin when requested
@@ -366,7 +309,7 @@ export const SpinWheel = ({
     if (autoSpin && !isSpinning && segments.length > 0) {
       spinWheel();
     }
-  }, [autoSpin]);
+  }, [autoSpin, isSpinning, segments.length]);
 
   // Get current segment for display
   const currentSegmentIndex = getCurrentSegmentIndex(currentRotation);

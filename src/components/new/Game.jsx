@@ -35,8 +35,8 @@ function Game({
     textColor: 'white'
   }));
 
-  // Determine if we should continue animation for late joiners
-  const shouldContinueAnimation = isRealtime && players.length > 0 && !isSpinning;
+  // Determine if we should continue animation only during countdown
+  const shouldContinueAnimation = Boolean(countdown && countdown.remainingSeconds > 0 && !isSpinning);
 
   // Handle countdown finished - show "Waiting to spin"
   useEffect(() => {
