@@ -174,6 +174,7 @@ const GameCard = ({
   onRejoinGame,
   onCancelGame,
   joiningGameId,
+  deletingGameId,
   token,
   gameCountdowns,
 }) => (
@@ -184,6 +185,9 @@ const GameCard = ({
   >
     {/* Game Card Content - Modern Layout */}
     <div className="flex flex-col gap-4">
+      {game.isOptimistic && (
+        <div className="text-xs font-semibold text-cyan-200">Creating game…</div>
+      )}
       {/* Top Section - Game Status & Player Info */}
       <div className="flex justify-between items-center">
         {/* Left - Player Count & Game ID */}
@@ -202,7 +206,7 @@ const GameCard = ({
         </div>
 
         {/* Right - Active Status Indicator */}
-        {isUserInGame(game) && (
+        {isUserInGame(game) && !game.isOptimistic && (
           <div className="flex items-center gap-2">
             <div className="bg-amber-400 rounded-full w-2 h-2 animate-pulse"></div>
             <span className="font-semibold text-amber-200 text-xs">Active</span>
@@ -211,7 +215,7 @@ const GameCard = ({
       </div>
 
       {/* Middle Section - Bet Information */}
-      <div className="bg-cyan-700 p-3 rounded-lg">
+      <div className={`bg-cyan-700 p-3 rounded-lg ${game.isOptimistic ? 'animate-pulse' : ''}`}>
         <div className="flex justify-between items-center">
           <div className="flex flex-col">
             <span className="font-semibold text-cyan-200 text-xs">
@@ -235,26 +239,33 @@ const GameCard = ({
       {/* Bottom Section - Game Status & Actions */}
       <div className="flex justify-between items-center">
         <span className="font-semibold text-amber-300 text-xs">
-          {game.status === 'waiting' ? 'Waiting' : game.status}
+          {game.isOptimistic ? 'Setting up…' : game.status === 'waiting' ? 'Waiting' : game.status}
         </span>
 
         {/* Game Status Component */}
-        <GameStatus
-          game={game}
-          isUserInGame={isUserInGame}
-          onJoinGame={onJoinGame}
-          onRejoinGame={onRejoinGame}
-          joiningGameId={joiningGameId}
-          token={token}
-          gameCountdowns={gameCountdowns}
-        />
-        {game.status === 'waiting' &&
+        {!game.isOptimistic && (
+          <GameStatus
+            game={game}
+            isUserInGame={isUserInGame}
+            onJoinGame={onJoinGame}
+            onRejoinGame={onRejoinGame}
+            joiningGameId={joiningGameId}
+            token={token}
+            gameCountdowns={gameCountdowns}
+          />
+        )}
+        {!game.isOptimistic && game.status === 'waiting' &&
           game.creator === game.players[0]?.username && (
             <button
               onClick={() => onCancelGame(game.gameId)}
-              className="bg-cyan-700 active:bg-cyan-600 ml-2 px-3 py-1 rounded-full font-semibold text-cyan-50 text-xs"
+              disabled={deletingGameId === game.gameId}
+              className={`ml-2 px-3 py-1 rounded-full text-cyan-50 text-xs font-semibold ${
+                deletingGameId === game.gameId
+                  ? 'bg-cyan-800 opacity-60'
+                  : 'bg-cyan-700 active:bg-cyan-600'
+              }`}
             >
-              Delete
+              {deletingGameId === game.gameId ? 'Deleting…' : 'Delete'}
             </button>
           )}
       </div>
@@ -270,6 +281,7 @@ const GamesList = ({
   onRejoinGame,
   onCancelGame,
   joiningGameId,
+  deletingGameId,
   token,
   gameCountdowns,
 }) => (
@@ -285,6 +297,7 @@ const GamesList = ({
           onRejoinGame={onRejoinGame}
           onCancelGame={onCancelGame}
           joiningGameId={joiningGameId}
+          deletingGameId={deletingGameId}
           token={token}
           gameCountdowns={gameCountdowns}
         />
@@ -293,13 +306,10 @@ const GamesList = ({
 )
 
 // Lightweight skeleton for games list area
-const LoadingState = () => (
+const LoadingState = ({ count = 3 }) => (
   <div className="flex flex-col flex-1 gap-3 bg-cyan-900 p-3 rounded-xl max-h-[60vh] overflow-y-auto">
-    {[1, 2, 3].map((i) => (
-      <div
-        key={i}
-        className="bg-cyan-800 p-4 rounded-lg min-w-52 animate-pulse"
-      >
+    {Array.from({ length: count }).map((_, i) => (
+      <div key={i} className="bg-cyan-800 p-4 rounded-lg min-w-52 animate-pulse">
         <div className="flex justify-between items-center mb-3">
           <div className="bg-cyan-700 rounded w-16 h-4" />
           <div className="bg-cyan-700 rounded w-10 h-3" />
@@ -353,6 +363,8 @@ const Lobby = () => {
   const [gamesError, setGamesError] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [joiningGameId, setJoiningGameId] = useState(null)
+  const [deletingGameId, setDeletingGameId] = useState(null)
+  const [showCreateSkeleton, setShowCreateSkeleton] = useState(false)
   const [socket, setSocket] = useState(null)
   const [gameCountdowns, setGameCountdowns] = useState({})
   const [selectedBet, setSelectedBet] = useState(10)
@@ -386,17 +398,21 @@ const Lobby = () => {
     newSocket.on('gameStateUpdate', ({ game }) => {
       // Only reflect updates for the currently selected bet tier
       if (selectedBet && game.betAmount !== selectedBet) return
+      const normalized = { ...game, gameId: String(game.gameId) }
       setRecentGames((prevGames) => {
-        const exists = prevGames.some((g) => g.gameId === game.gameId)
-        if (exists) {
-          return prevGames.map((g) => (g.gameId === game.gameId ? game : g))
+        const idx = prevGames.findIndex((g) => String(g.gameId) === normalized.gameId)
+        if (idx !== -1) {
+          const next = [...prevGames]
+          next[idx] = { ...normalized, isOptimistic: false }
+          return next
         }
-        // Add new waiting games that match the bet amount (including creator's own)
-        if (game.status === 'waiting' && game.betAmount === selectedBet) {
-          return [game, ...prevGames]
+        if (normalized.status === 'waiting' && normalized.betAmount === selectedBet) {
+          return [normalized, ...prevGames]
         }
         return prevGames
       })
+      // Stop skeleton when the webhook arrives
+      setShowCreateSkeleton(false)
     })
 
     newSocket.on('spinStarted', ({ game, message }) => {
@@ -474,7 +490,7 @@ const Lobby = () => {
     // Notify when a player joins any game
     newSocket.on('playerJoined', ({ gameId, player }) => {
       // If it's the user's game and bet matches, show toast and navigate to the game
-      const game = recentGames.find((g) => g.gameId === gameId)
+      const game = recentGames.find((g) => String(g.gameId) === String(gameId))
       if (game && game.betAmount === selectedBet) {
         message.info(`${player.username} joined game #${gameId}`)
         if (game.creator === user?.username) {
@@ -577,6 +593,7 @@ const Lobby = () => {
   }
 
   const handleCancelGame = async (gameId) => {
+    setDeletingGameId(gameId)
     try {
       const res = await fetch(`${API_URL}/api/games/${gameId}`, {
         method: 'DELETE',
@@ -592,6 +609,8 @@ const Lobby = () => {
       setRecentGames((prev) => prev.filter((g) => g.gameId !== gameId))
     } catch (err) {
       message.error(err.message || 'Failed to delete game')
+    } finally {
+      setDeletingGameId(null)
     }
   }
 
@@ -601,6 +620,9 @@ const Lobby = () => {
     setGamesError(null)
 
     try {
+      // Show global skeleton at the top while creating
+      setShowCreateSkeleton(true)
+
       const res = await fetch(`${API_URL}/api/games/create`, {
         method: 'POST',
         headers: {
@@ -619,31 +641,16 @@ const Lobby = () => {
         throw new Error(text || 'Failed to create game')
       }
       const created = await res.json()
-      const createdGameId = created?.gameId || created?.game?.gameId
+      const createdGameId = String(created?.gameId || created?.game?.gameId)
       if (createdGameId) {
-        // Show toast and keep user on lobby; new game will appear at top via socket
         message.success(`Created game #${createdGameId} at ${selectedBet} ETB`)
-        // Force-insert locally in case socket delay
-        setRecentGames((prev) => [
-          {
-            ...created,
-            players: created.players || [
-              {
-                username: user?.username,
-                chatId: user?.chatId,
-                isActive: true,
-                joinedAt: new Date().toISOString(),
-              },
-            ],
-          },
-          ...prev,
-        ])
       }
     } catch (e) {
       console.error('Create game failed:', e)
       setGamesError(e.message || 'Failed to create game')
     } finally {
       setIsCreating(false)
+      setShowCreateSkeleton(false)
     }
   }
 
@@ -730,7 +737,9 @@ const Lobby = () => {
                 playersCount < (g.maxPlayers || Infinity)
               )
             })
-            if (joinableGames.length === 0) return null
+            if (joinableGames.length === 0) {
+              return showCreateSkeleton ? <LoadingState count={1} /> : null
+            }
             return (
               <GamesList
                 games={joinableGames}
@@ -739,6 +748,7 @@ const Lobby = () => {
                 onRejoinGame={handleRejoinGame}
                 onCancelGame={handleCancelGame}
                 joiningGameId={joiningGameId}
+                deletingGameId={deletingGameId}
                 token={token}
                 gameCountdowns={gameCountdowns}
               />
