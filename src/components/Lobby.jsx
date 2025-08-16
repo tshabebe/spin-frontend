@@ -14,6 +14,7 @@ import { GiChessKing } from 'react-icons/gi'
 import { FaQuestionCircle } from 'react-icons/fa'
 import { io } from 'socket.io-client'
 import { API_URL } from '../utils/apiUrl'
+import { message } from 'antd'
 import { useGetUserInfo } from '../utils/getUserinfo'
 import Loading from './Loading'
 import RulesModal from './RulesModal'
@@ -171,6 +172,7 @@ const GameCard = ({
   isUserInGame,
   onJoinGame,
   onRejoinGame,
+  onCancelGame,
   joiningGameId,
   token,
   gameCountdowns,
@@ -246,6 +248,14 @@ const GameCard = ({
           token={token}
           gameCountdowns={gameCountdowns}
         />
+        {game.status === 'waiting' && game.creator === game.players[0]?.username && (
+          <button
+            onClick={() => onCancelGame(game.gameId)}
+            className="ml-2 px-3 py-1 rounded-full bg-cyan-700 text-cyan-50 text-xs font-semibold active:bg-cyan-600"
+          >
+            Delete
+          </button>
+        )}
       </div>
     </div>
   </div>
@@ -257,6 +267,7 @@ const GamesList = ({
   isUserInGame,
   onJoinGame,
   onRejoinGame,
+  onCancelGame,
   joiningGameId,
   token,
   gameCountdowns,
@@ -271,6 +282,7 @@ const GamesList = ({
           isUserInGame={isUserInGame}
           onJoinGame={onJoinGame}
           onRejoinGame={onRejoinGame}
+          onCancelGame={onCancelGame}
           joiningGameId={joiningGameId}
           token={token}
           gameCountdowns={gameCountdowns}
@@ -358,7 +370,7 @@ const Lobby = () => {
         if (exists) {
           return prevGames.map((g) => (g.gameId === game.gameId ? game : g))
         }
-        // Only add new waiting games that match the bet amount
+        // Add new waiting games that match the bet amount (including creator's own)
         if (game.status === 'waiting' && game.betAmount === selectedBet) {
           return [game, ...prevGames]
         }
@@ -436,6 +448,18 @@ const Lobby = () => {
     newSocket.on('gameError', ({ message }) => {
       console.error('Game error:', message)
       setGamesError(message)
+    })
+
+    // Notify when a player joins any game
+    newSocket.on('playerJoined', ({ gameId, player }) => {
+      // If it's the user's game and bet matches, show toast and navigate to the game
+      const game = recentGames.find((g) => g.gameId === gameId)
+      if (game && game.betAmount === selectedBet) {
+        message.info(`${player.username} joined game #${gameId}`)
+        if (game.creator === user?.username) {
+          navigate(`/spin-wheel/${gameId}?token=${token}`)
+        }
+      }
     })
 
     setSocket(newSocket)
@@ -531,6 +555,25 @@ const Lobby = () => {
     navigate(`/spin-wheel/${gameId}?token=${token}`)
   }
 
+  const handleCancelGame = async (gameId) => {
+    try {
+      const res = await fetch(`${API_URL}/api/games/${gameId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(text || 'Failed to delete game')
+      }
+      message.success(`Deleted game #${gameId}`)
+      setRecentGames((prev) => prev.filter((g) => g.gameId !== gameId))
+    } catch (err) {
+      message.error(err.message || 'Failed to delete game')
+    }
+  }
+
   const handleCreateGame = async () => {
     if (!selectedBet || isCreating) return
     setIsCreating(true)
@@ -557,9 +600,23 @@ const Lobby = () => {
       const created = await res.json()
       const createdGameId = created?.gameId || created?.game?.gameId
       if (createdGameId) {
-        navigate(`/spin-wheel/${createdGameId}?token=${token}`)
-      } else {
-        await fetchRecentGames()
+        // Show toast and keep user on lobby; new game will appear at top via socket
+        message.success(`Created game #${createdGameId} at ${selectedBet} ETB`)
+        // Force-insert locally in case socket delay
+        setRecentGames((prev) => [
+          {
+            ...created,
+            players: created.players || [
+              {
+                username: user?.username,
+                chatId: user?.chatId,
+                isActive: true,
+                joinedAt: new Date().toISOString(),
+              },
+            ],
+          },
+          ...prev,
+        ])
       }
     } catch (e) {
       console.error('Create game failed:', e)
@@ -649,7 +706,6 @@ const Lobby = () => {
               return (
                 g.status === 'waiting' &&
                 g.betAmount === selectedBet &&
-                !isUserInGame(g) &&
                 playersCount < (g.maxPlayers || Infinity)
               )
             })
@@ -660,6 +716,7 @@ const Lobby = () => {
                 isUserInGame={isUserInGame}
                 onJoinGame={handleJoinGame}
                 onRejoinGame={handleRejoinGame}
+                onCancelGame={handleCancelGame}
                 joiningGameId={joiningGameId}
                 token={token}
                 gameCountdowns={gameCountdowns}
