@@ -52,7 +52,7 @@ const ActionButtons = ({ onRefresh, isLoading, onOpenRules }) => (
 )
 
 // Create Game Panel
-const betOptions = [20, 30, 50, 100, 200, 500]
+const betOptions = [10, 20, 30, 50, 100, 200]
 const CreateGamePanel = ({
   selectedBet,
   setSelectedBet,
@@ -261,7 +261,7 @@ const GamesList = ({
   token,
   gameCountdowns,
 }) => (
-  <div className="flex flex-col flex-1 gap-3 bg-cyan-900 p-3 rounded-xl max-h-96 overflow-y-auto">
+  <div className="flex flex-col flex-1 gap-3 bg-cyan-900 p-3 rounded-xl overflow-y-auto">
     {games
       .filter((g) => g.status !== 'completed' && g.status !== 'cancelled')
       .map((game) => (
@@ -322,7 +322,7 @@ const Lobby = () => {
   const [joiningGameId, setJoiningGameId] = useState(null)
   const [socket, setSocket] = useState(null)
   const [gameCountdowns, setGameCountdowns] = useState({})
-  const [selectedBet, setSelectedBet] = useState(null)
+  const [selectedBet, setSelectedBet] = useState(10)
   const [isCreating, setIsCreating] = useState(false)
   const [showRules, setShowRules] = useState(false)
   const navigate = useNavigate()
@@ -351,34 +351,37 @@ const Lobby = () => {
 
     // Game state update handlers
     newSocket.on('gameStateUpdate', ({ game }) => {
+      // Only reflect updates for the currently selected bet tier
+      if (selectedBet && game.betAmount !== selectedBet) return
       setRecentGames((prevGames) => {
-        const updatedGames = prevGames.map((g) =>
-          g.gameId === game.gameId ? game : g,
-        )
-        return updatedGames
+        const exists = prevGames.some((g) => g.gameId === game.gameId)
+        if (exists) {
+          return prevGames.map((g) => (g.gameId === game.gameId ? game : g))
+        }
+        // Only add new waiting games that match the bet amount
+        if (game.status === 'waiting' && game.betAmount === selectedBet) {
+          return [game, ...prevGames]
+        }
+        return prevGames
       })
     })
 
     newSocket.on('spinStarted', ({ game, message }) => {
       console.log('Spin started:', message)
-      setRecentGames((prevGames) => {
-        const updatedGames = prevGames.map((g) =>
-          g.gameId === game.gameId ? game : g,
-        )
-        return updatedGames
-      })
+      if (selectedBet && game.betAmount !== selectedBet) return
+      setRecentGames((prevGames) =>
+        prevGames.map((g) => (g.gameId === game.gameId ? game : g)),
+      )
     })
 
     newSocket.on(
       'spinCompleted',
       ({ game, spinResult, payoutInfo, message }) => {
         console.log('Spin completed:', message)
-        setRecentGames((prevGames) => {
-          const updatedGames = prevGames.map((g) =>
-            g.gameId === game.gameId ? game : g,
-          )
-          return updatedGames
-        })
+        if (selectedBet && game.betAmount !== selectedBet) return
+        setRecentGames((prevGames) =>
+          prevGames.map((g) => (g.gameId === game.gameId ? game : g)),
+        )
       },
     )
 
@@ -391,11 +394,11 @@ const Lobby = () => {
       ({ gameId, duration, startTime, endTime }) => {
         console.log('Countdown started for game:', gameId)
         setGameCountdowns((prev) => ({
-          ...prev,
-          [gameId]: {
-            duration,
-            startTime: new Date(startTime),
-            endTime: new Date(endTime),
+        ...prev,
+        [gameId]: {
+          duration,
+          startTime: new Date(startTime),
+          endTime: new Date(endTime),
             remainingSeconds: Math.ceil(duration / 1000),
           },
         }))
@@ -424,12 +427,10 @@ const Lobby = () => {
 
     newSocket.on('playerLeft', ({ game, leftPlayer, message }) => {
       console.log('Player left:', message)
-      setRecentGames((prevGames) => {
-        const updatedGames = prevGames.map((g) =>
-          g.gameId === game.gameId ? game : g,
-        )
-        return updatedGames
-      })
+      if (selectedBet && game.betAmount !== selectedBet) return
+      setRecentGames((prevGames) =>
+        prevGames.map((g) => (g.gameId === game.gameId ? game : g)),
+      )
     })
 
     newSocket.on('gameError', ({ message }) => {
@@ -442,13 +443,17 @@ const Lobby = () => {
     return () => {
       newSocket.close()
     }
-  }, [token, user?.username])
+  }, [token, user?.username, selectedBet])
 
   // Fetch games logic
   const fetchRecentGames = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch(`${API_URL}/api/games/recent`, {
+      const url = new URL(`${API_URL}/api/games/recent`)
+      if (selectedBet) {
+        url.searchParams.set('betAmount', String(selectedBet))
+      }
+      const response = await fetch(url.toString(), {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -489,7 +494,7 @@ const Lobby = () => {
     if (!userLoading && user) {
       fetchRecentGames()
     }
-  }, [user, userLoading])
+  }, [user, userLoading, selectedBet])
 
   const handleJoinGame = async (gameId, stakeAmount) => {
     setJoiningGameId(gameId)
@@ -504,7 +509,7 @@ const Lobby = () => {
           username: user?.username,
           chatId: user?.chatId,
         }),
-      })
+        })
 
       const data = await response.json()
 
@@ -551,7 +556,6 @@ const Lobby = () => {
       }
       const created = await res.json()
       const createdGameId = created?.gameId || created?.game?.gameId
-      setSelectedBet(null)
       if (createdGameId) {
         navigate(`/spin-wheel/${createdGameId}?token=${token}`)
       } else {
@@ -578,7 +582,6 @@ const Lobby = () => {
     return (
       game.status === 'waiting' &&
       !isUserInGame(game) &&
-      playersCount > 0 &&
       playersCount < maxPlayers
     )
   }
@@ -621,7 +624,7 @@ const Lobby = () => {
             isLoading={isLoading}
             onOpenRules={() => setShowRules(true)}
           />
-        </div>
+            </div>
 
         {/* Create Game Panel */}
         <div className="pt-4">
@@ -645,8 +648,8 @@ const Lobby = () => {
                 : 0
               return (
                 g.status === 'waiting' &&
+                g.betAmount === selectedBet &&
                 !isUserInGame(g) &&
-                playersCount > 0 &&
                 playersCount < (g.maxPlayers || Infinity)
               )
             })

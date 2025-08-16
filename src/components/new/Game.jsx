@@ -70,12 +70,12 @@ function Game({
     onSpinComplete(winner);
   };
 
-  // Show loading state if no players
+  // If no players (should not happen since creator auto-joins), show info instead of loading
   if (players.length === 0) {
     return (
       <div className="min-h-screen bg-cyan-950 flex flex-col">
         <div className="flex-1 flex flex-col items-center justify-center p-6">
-          <div className="text-cyan-100 text-sm font-semibold">Loading players...</div>
+          <div className="text-cyan-100 text-sm font-semibold">Waiting for players to join. The game starts when there are at least 2 players.</div>
         </div>
       </div>
     );
