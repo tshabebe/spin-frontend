@@ -254,6 +254,7 @@ const SpinWheelGame = () => {
           onBackClick={() => navigate('/lobby')}
           socket={socket}
           isRealtime={true}
+          currentUsername={currentUser?.username}
         />
       )}
     </>

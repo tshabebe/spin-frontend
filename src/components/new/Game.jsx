@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import SpinWheel from "./SpinWheel";
 import { GiSpinningSword } from "react-icons/gi";
+import { maskUsername } from "../../utils/maskUsername";
 import { FaArrowLeft, FaCoins, FaTrophy, FaHashtag } from "react-icons/fa";
 
 function Game({
@@ -17,7 +18,8 @@ function Game({
   token = null,
   onBackClick = () => {},
   socket = null,
-  isRealtime = false
+  isRealtime = false,
+  currentUsername = null
 }) {
   const [mustSpin, setMustSpin] = useState(false);
 
@@ -163,10 +165,14 @@ function Game({
             </div>
           )}
 
-          {/* Winner Display */}
+          {/* Winner Display (single source of truth) */}
           {winningEntry && !localIsSpinning && !isSpinning && (
             <div className="pt-6 p-4 bg-cyan-600 rounded-lg text-cyan-50">
-              <div className="text-lg font-semibold">🎉 Winner: {winningEntry} 🎉</div>
+              <div className="text-lg font-semibold">
+                {currentUsername && winningEntry === currentUsername
+                  ? '🎉 You won! 🎉'
+                  : `🎉 Winner: ${maskUsername(winningEntry)} 🎉`}
+              </div>
             </div>
           )}
         </div>

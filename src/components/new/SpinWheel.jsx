@@ -328,20 +328,7 @@ export const SpinWheel = ({
 
   return (
     <div className="flex flex-col items-center">
-      {/* Real-time indicators */}
-      {isRealtime && (
-        <div className="pb-3 flex gap-3 text-xs text-cyan-200">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
-            <span>Real-time</span>
-          </div>
-          {serverCalculationTime && (
-            <div className="flex items-center gap-2">
-              <span>Server: {serverCalculationTime.toFixed(0)}ms</span>
-          </div>
-          )}
-        </div>
-      )}
+      {/* Real-time indicators removed per UX request */}
 
       {/* Wheel Container */}
       <div className="relative">
@@ -377,12 +364,7 @@ export const SpinWheel = ({
         )}
       </div>
 
-      {/* Winner display */}
-      {winner && !isSpinning && (
-        <div className="pt-6 p-3 bg-gradient-to-r from-cyan-600 to-cyan-700 rounded-lg text-cyan-50 shadow-lg">
-          <div className="text-xl font-bold">🎉 Winner: {winner.text || winner.id} 🎉</div>
-        </div>
-      )}
+      {/* Winner banner rendering moved to parent to avoid duplication */}
     </div>
   );
 };
