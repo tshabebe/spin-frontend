@@ -179,7 +179,7 @@ const GameCard = ({
 }) => (
   <div
     className={`relative overflow-hidden rounded-lg p-4
-               transition-colors bg-cyan-800 duration-300 min-w-52
+               transition-colors bg-cyan-800 duration-300 min-w-52 min-h-fit
                ${isUserInGame(game) ? 'bg-amber-800' : ''}`}
   >
     {/* Game Card Content - Modern Layout */}
@@ -248,14 +248,15 @@ const GameCard = ({
           token={token}
           gameCountdowns={gameCountdowns}
         />
-        {game.status === 'waiting' && game.creator === game.players[0]?.username && (
-          <button
-            onClick={() => onCancelGame(game.gameId)}
-            className="ml-2 px-3 py-1 rounded-full bg-cyan-700 text-cyan-50 text-xs font-semibold active:bg-cyan-600"
-          >
-            Delete
-          </button>
-        )}
+        {game.status === 'waiting' &&
+          game.creator === game.players[0]?.username && (
+            <button
+              onClick={() => onCancelGame(game.gameId)}
+              className="bg-cyan-700 active:bg-cyan-600 ml-2 px-3 py-1 rounded-full font-semibold text-cyan-50 text-xs"
+            >
+              Delete
+            </button>
+          )}
       </div>
     </div>
   </div>
@@ -272,7 +273,7 @@ const GamesList = ({
   token,
   gameCountdowns,
 }) => (
-  <div className="flex flex-col flex-1 gap-3 bg-cyan-900 p-3 rounded-xl overflow-y-auto">
+  <div className="flex flex-col flex-1 gap-3 bg-cyan-900 p-3 rounded-xl max-h-[60vh] overflow-y-auto">
     {games
       .filter((g) => g.status !== 'completed' && g.status !== 'cancelled')
       .map((game) => (
@@ -291,10 +292,30 @@ const GamesList = ({
   </div>
 )
 
-// Simple component for loading state
+// Lightweight skeleton for games list area
 const LoadingState = () => (
-  <div className="flex flex-1 justify-center items-center">
-    <div className="border-cyan-400 border-t-2 border-b-2 rounded-full w-8 h-8 animate-spin"></div>
+  <div className="flex flex-col flex-1 gap-3 bg-cyan-900 p-3 rounded-xl max-h-[60vh] overflow-y-auto">
+    {[1, 2, 3].map((i) => (
+      <div
+        key={i}
+        className="bg-cyan-800 p-4 rounded-lg min-w-52 animate-pulse"
+      >
+        <div className="flex justify-between items-center mb-3">
+          <div className="bg-cyan-700 rounded w-16 h-4" />
+          <div className="bg-cyan-700 rounded w-10 h-3" />
+        </div>
+        <div className="bg-cyan-700/60 mb-3 p-3 rounded-lg">
+          <div className="flex justify-between items-center">
+            <div className="bg-cyan-600 rounded w-20 h-4" />
+            <div className="bg-amber-600/60 rounded w-16 h-4" />
+          </div>
+        </div>
+        <div className="flex justify-between items-center">
+          <div className="bg-cyan-700 rounded w-14 h-3" />
+          <div className="bg-cyan-700 rounded-full w-12 h-6" />
+        </div>
+      </div>
+    ))}
   </div>
 )
 
@@ -406,11 +427,11 @@ const Lobby = () => {
       ({ gameId, duration, startTime, endTime }) => {
         console.log('Countdown started for game:', gameId)
         setGameCountdowns((prev) => ({
-        ...prev,
-        [gameId]: {
-          duration,
-          startTime: new Date(startTime),
-          endTime: new Date(endTime),
+          ...prev,
+          [gameId]: {
+            duration,
+            startTime: new Date(startTime),
+            endTime: new Date(endTime),
             remainingSeconds: Math.ceil(duration / 1000),
           },
         }))
@@ -533,7 +554,7 @@ const Lobby = () => {
           username: user?.username,
           chatId: user?.chatId,
         }),
-        })
+      })
 
       const data = await response.json()
 
@@ -653,7 +674,7 @@ const Lobby = () => {
     )
   }
 
-  if (userLoading || isLoading) {
+  if (userLoading) {
     return <Loading />
   }
 
@@ -681,7 +702,7 @@ const Lobby = () => {
             isLoading={isLoading}
             onOpenRules={() => setShowRules(true)}
           />
-            </div>
+        </div>
 
         {/* Create Game Panel */}
         <div className="pt-4">
