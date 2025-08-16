@@ -325,6 +325,7 @@ const Lobby = () => {
   const [selectedBet, setSelectedBet] = useState(null)
   const [isCreating, setIsCreating] = useState(false)
   const [showRules, setShowRules] = useState(false)
+  const navigate = useNavigate()
 
   // Socket connection logic
   useEffect(() => {
@@ -511,7 +512,7 @@ const Lobby = () => {
         throw new Error(data.error || 'Join failed')
       }
 
-      window.location.href = `/spin-wheel/${data.gameId}?token=${token}`
+      navigate(`/spin-wheel/${data.gameId}?token=${token}`)
       fetchRecentGames()
     } catch (error) {
       console.error('Join error:', error)
@@ -522,26 +523,13 @@ const Lobby = () => {
   }
 
   const handleRejoinGame = (gameId, token) => {
-    window.location.href = `/spin-wheel/${gameId}?token=${token}`
+    navigate(`/spin-wheel/${gameId}?token=${token}`)
   }
 
   const handleCreateGame = async () => {
     if (!selectedBet || isCreating) return
     setIsCreating(true)
     setGamesError(null)
-
-    // Optimistic placeholder
-    const tempId = Math.floor(Math.random() * 1000000)
-    const optimistic = {
-      gameId: tempId,
-      status: 'waiting',
-      creator: user?.username || 'you',
-      players: [],
-      maxPlayers: 10,
-      minPlayers: 2,
-      betAmount: selectedBet,
-    }
-    setRecentGames((prev) => [optimistic, ...prev])
 
     try {
       const res = await fetch(`${API_URL}/api/games/create`, {
@@ -562,18 +550,15 @@ const Lobby = () => {
         throw new Error(text || 'Failed to create game')
       }
       const created = await res.json()
-      // Replace optimistic with real game
-      setRecentGames((prev) => [
-        created,
-        ...prev.filter((g) => g.gameId !== tempId),
-      ])
+      const createdGameId = created?.gameId || created?.game?.gameId
       setSelectedBet(null)
-      // Refresh profile to reflect new balance
-      await refreshUserInfo()
+      if (createdGameId) {
+        navigate(`/spin-wheel/${createdGameId}?token=${token}`)
+      } else {
+        await fetchRecentGames()
+      }
     } catch (e) {
       console.error('Create game failed:', e)
-      // Rollback optimistic
-      setRecentGames((prev) => prev.filter((g) => g.gameId !== tempId))
       setGamesError(e.message || 'Failed to create game')
     } finally {
       setIsCreating(false)
@@ -583,6 +568,19 @@ const Lobby = () => {
   const isUserInGame = (game) => {
     if (!user?.chatId) return false
     return game.players.some((player) => player.chatId === user.chatId)
+  }
+
+  // Only show games that are truly joinable
+  const isGameJoinable = (game) => {
+    if (!game) return false
+    const playersCount = Array.isArray(game.players) ? game.players.length : 0
+    const maxPlayers = game.maxPlayers || Infinity
+    return (
+      game.status === 'waiting' &&
+      !isUserInGame(game) &&
+      playersCount > 0 &&
+      playersCount < maxPlayers
+    )
   }
 
   if (tokenError) {
@@ -638,23 +636,33 @@ const Lobby = () => {
 
         {/* Main Content - Vertical flow */}
         <div className="flex flex-col flex-1 pt-6">
-          {isLoading ? (
-            <LoadingState />
-          ) : gamesError ? (
-            <ErrorState error={gamesError} />
-          ) : recentGames.length > 0 ? (
-            <GamesList
-              games={recentGames}
-              isUserInGame={isUserInGame}
-              onJoinGame={handleJoinGame}
-              onRejoinGame={handleRejoinGame}
-              joiningGameId={joiningGameId}
-              token={token}
-              gameCountdowns={gameCountdowns}
-            />
-          ) : (
-            <EmptyState isLoading={isLoading} />
-          )}
+          {(() => {
+            if (isLoading) return <LoadingState />
+            if (gamesError) return <ErrorState error={gamesError} />
+            const joinableGames = recentGames.filter((g) => {
+              const playersCount = Array.isArray(g.players)
+                ? g.players.length
+                : 0
+              return (
+                g.status === 'waiting' &&
+                !isUserInGame(g) &&
+                playersCount > 0 &&
+                playersCount < (g.maxPlayers || Infinity)
+              )
+            })
+            if (joinableGames.length === 0) return null
+            return (
+              <GamesList
+                games={joinableGames}
+                isUserInGame={isUserInGame}
+                onJoinGame={handleJoinGame}
+                onRejoinGame={handleRejoinGame}
+                joiningGameId={joiningGameId}
+                token={token}
+                gameCountdowns={gameCountdowns}
+              />
+            )
+          })()}
 
           <div className="pt-6">
             <Transactions token={token} />
